@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+    <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
         <h1 className="text-4xl font-bold text-center mb-8">
           AI Guru Meditation
@@ -9,6 +9,6 @@ export default function Home() {
           A voice-first meditation app where users speak to an AI Guru who guides meditation in real time
         </p>
       </div>
-    </main>
+    </div>
   );
 }
