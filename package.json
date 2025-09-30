@@ -1,0 +1,26 @@
+{
+  "name": "ai-guru-meditation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A voice-first Next.js app where users speak to an AI Guru who selects and guides a meditation in real time",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "meditation",
+    "ai",
+    "voice",
+    "nextjs",
+    "supabase"
+  ],
+  "author": "Ibrahim Haddad",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
