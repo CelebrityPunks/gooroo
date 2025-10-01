@@ -208,8 +208,15 @@ export function chooseTechniqueForProfile(profile: GuruProfile): Technique {
 }
 
 export function pickRandomTechnique(): Technique {
+  if (TECHNIQUES.length === 0) {
+    throw new Error('No techniques available to choose from.');
+  }
   const index = Math.floor(Math.random() * TECHNIQUES.length);
-  return TECHNIQUES[index];
+  const technique = TECHNIQUES[index];
+  if (!technique) {
+    throw new Error('Failed to select a technique.');
+  }
+  return technique;
 }
 
 export function formatPattern(pattern: BreathPattern): string {

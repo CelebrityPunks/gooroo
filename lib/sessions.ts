@@ -68,8 +68,8 @@ export function createSession(input: CreateSessionInput): SessionRecord {
         : Date.now().toString(36),
     techniqueKey: input.techniqueKey,
     decidedBy: input.decidedBy,
-    metadata: input.metadata,
     startedAt: new Date().toISOString(),
+    ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
   };
 
   const sessions = readSessions();
