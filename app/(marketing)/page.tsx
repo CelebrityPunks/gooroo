@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Card } from '../../components/ui';
+import { SignInForm } from '../../components/auth/SignInForm';
 
 export default function MarketingPage() {
   return (
@@ -14,20 +15,7 @@ export default function MarketingPage() {
         
         <Card className="max-w-md mx-auto">
           <h2 className="text-xl font-semibold mb-4 text-center">Get Started</h2>
-          <div className="space-y-3">
-            <Button className="w-full" size="lg">
-              Sign In
-            </Button>
-            <div className="text-center text-sm text-gray-500">
-              or
-            </div>
-            <Button variant="outline" className="w-full" size="lg">
-              Let Guru Decide
-            </Button>
-            <Button variant="outline" className="w-full" size="lg">
-              Pick Technique
-            </Button>
-          </div>
+          <SignInForm />
         </Card>
       </div>
     </div>
