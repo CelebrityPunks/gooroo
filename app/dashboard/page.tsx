@@ -8,6 +8,7 @@ import {
   listSessions,
   onSessionsChanged,
   SessionRecord,
+  SessionStatus,
 } from '../../lib/sessions';
 import { getTechniqueByKey } from '../../lib/techniques';
 import Link from 'next/link';
@@ -18,14 +19,18 @@ type Summary = {
 };
 
 function computeSummary(sessions: SessionRecord[]): Summary {
-  const totalMinutes = sessions.reduce((total, session) => {
+  const completedSessions = sessions.filter(
+    session => session.status === 'completed'
+  );
+
+  const totalMinutes = completedSessions.reduce((total, session) => {
     const technique = getTechniqueByKey(session.techniqueKey);
     return total + (technique?.defaultDurationMinutes ?? 5);
   }, 0);
 
   const dayKey = (value: string) => new Date(value).toISOString().split('T')[0];
   const uniqueDays = new Set(
-    sessions.map(session => dayKey(session.startedAt))
+    completedSessions.map(session => dayKey(session.startedAt))
   );
 
   if (uniqueDays.size === 0) {
@@ -51,6 +56,23 @@ function computeSummary(sessions: SessionRecord[]): Summary {
   }
 
   return { totalMinutes, streak };
+}
+
+function formatStatusLabel(status: SessionStatus): string {
+  return status
+    .replace(/_/g, ' ')
+    .replace(/^(.)/, match => match.toUpperCase());
+}
+
+function statusBadgeClasses(status: SessionStatus): string {
+  switch (status) {
+    case 'completed':
+      return 'border-green-200 bg-green-50 text-green-700';
+    case 'abandoned':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    default:
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
 }
 
 function formatDate(value: string): string {
@@ -133,26 +155,36 @@ export default function DashboardPage() {
               <ul className='space-y-2 text-sm text-gray-700'>
                 {recentSessions.map(session => {
                   const technique = getTechniqueByKey(session.techniqueKey);
+                  const statusLabel = formatStatusLabel(session.status);
                   return (
                     <li
                       key={session.id}
                       className='flex items-start justify-between gap-3 rounded-lg border border-gray-100 bg-white px-3 py-2'
                     >
-                      <div>
+                      <div className='space-y-1'>
                         <p className='font-semibold text-gray-900'>
                           {technique?.name ?? 'Meditation'}
                         </p>
-                        <p className='text-xs text-gray-500'>
-                          {formatDate(session.startedAt)} ·{' '}
-                          {session.decidedBy === 'guru'
-                            ? 'Guru choice'
-                            : 'Your pick'}
+                        <div className='flex flex-wrap items-center gap-2 text-xs text-gray-500'>
+                          <span>
+                            {formatDate(session.startedAt)} ·{' '}
+                            {session.decidedBy === 'guru'
+                              ? 'Guru choice'
+                              : 'Your pick'}
+                          </span>
                           {session.goal && (
-                            <span className='ml-1 text-gray-400'>
-                              · Goal: {session.goal}
+                            <span className='text-gray-400'>
+                              Goal: {session.goal}
                             </span>
                           )}
-                        </p>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClasses(
+                              session.status
+                            )}`}
+                          >
+                            {statusLabel}
+                          </span>
+                        </div>
                       </div>
                       <Link
                         className='text-xs font-semibold text-blue-600 hover:underline'
