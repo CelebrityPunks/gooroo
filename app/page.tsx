@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button, Card } from '../components/ui';
 
 export default function Home() {
