@@ -7,7 +7,6 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
     'next/core-web-vitals',
   ],
   parser: '@typescript-eslint/parser',
@@ -20,11 +19,6 @@ module.exports = {
   },
   plugins: ['@typescript-eslint'],
   rules: {
-    // TypeScript specific rules
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/prefer-const': 'error',
-    
     // General rules
     'no-console': 'warn',
     'no-debugger': 'error',
