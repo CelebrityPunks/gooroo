@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import '../styles/globals.css';
+import { AuthProvider } from '../components/auth/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'AI Guru Meditation',
@@ -15,9 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <AuthProvider>
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

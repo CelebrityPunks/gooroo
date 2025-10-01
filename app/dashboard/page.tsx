@@ -1,13 +1,29 @@
+'use client';
+
 import React from 'react';
 import { Card } from '../../components/ui';
+import { useAuth } from '../../components/auth/AuthProvider';
+import { Button } from '../../components/ui';
 
 export default function DashboardPage() {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Dashboard
-        </h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Dashboard
+          </h1>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Welcome, {user?.email}
+            </span>
+            <Button variant="outline" onClick={signOut}>
+              Sign Out
+            </Button>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
