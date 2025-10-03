@@ -1,33 +1,70 @@
 import React from 'react';
-import { Card } from '../../../../components/ui';
+import { notFound } from 'next/navigation';
+import LiveSessionView from './LiveSessionView';
+import { getTechniqueByKey, TechniqueKey } from '../../../../lib/techniques';
+import { createClient } from '../../../../lib/supabaseServer';
+import type { SessionStatus } from '../../../../lib/sessions';
 
 interface LiveSessionPageProps {
   params: {
     sessionId: string;
   };
+  searchParams?: {
+    technique?: string;
+    decidedBy?: string;
+  };
 }
 
-export default function LiveSessionPage({ params }: LiveSessionPageProps) {
+interface SessionRow {
+  technique: TechniqueKey | null;
+  decided_by: 'guru' | 'user';
+  goal: string | null;
+  status: SessionStatus | null;
+  started_at: string | null;
+}
+
+export default async function LiveSessionPage({
+  params,
+  searchParams,
+}: LiveSessionPageProps) {
   const { sessionId } = params;
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('technique, decided_by, goal, status, started_at')
+    .eq('id', sessionId)
+    .maybeSingle<SessionRow>();
+
+  if (!data && !searchParams?.technique) {
+    notFound();
+  }
+
+  const loadError = error ? 'We could not load full session details.' : null;
+
+  const techniqueKey =
+    data?.technique ??
+    (searchParams?.technique as TechniqueKey | undefined) ??
+    null;
+  const technique = getTechniqueByKey(techniqueKey);
+  const decidedBy =
+    (searchParams?.decidedBy as 'guru' | 'user' | undefined) ??
+    data?.decided_by ??
+    'guru';
+
+  const goal = data?.goal ?? null;
+  const startedAt = data?.started_at ?? null;
+  const initialStatus: SessionStatus = data?.status ?? 'live';
 
   return (
-    <div className='min-h-screen bg-gray-50 p-8'>
-      <div className='max-w-3xl mx-auto space-y-6'>
-        <header className='space-y-2 text-center'>
-          <h1 className='text-3xl font-bold text-gray-900'>Live Session</h1>
-          <p className='text-gray-600'>
-            Placeholder view for session{' '}
-            <span className='font-mono'>{sessionId}</span>
-          </p>
-        </header>
-
-        <Card className='text-center text-gray-600'>
-          <p>
-            This page will host the real-time meditation experience. For now it
-            simply confirms the active session ID.
-          </p>
-        </Card>
-      </div>
-    </div>
+    <LiveSessionView
+      sessionId={sessionId}
+      technique={technique}
+      decidedBy={decidedBy}
+      goal={goal}
+      startedAt={startedAt}
+      initialStatus={initialStatus}
+      loadError={loadError}
+    />
   );
 }
