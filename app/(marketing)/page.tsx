@@ -1,2 +1,7 @@
-export { default } from './marketing/page';
-export { dynamic } from './marketing/page';
+import { MarketingPageContent } from '@/components/marketing/MarketingPageContent';
+
+export const dynamic = 'force-dynamic';
+
+export default function LandingPage() {
+  return <MarketingPageContent />;
+}
