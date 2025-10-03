@@ -1,5 +1,38 @@
-'use client';
+import { redirect } from 'next/navigation';
+import DashboardClient from './DashboardClient';
+import { createClient } from '../../lib/supabaseServer';
+import { mapSessionRow, SessionRecord, SessionRow } from '../../lib/sessions';
 
+export default async function DashboardPage() {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    redirect('/');
+  }
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('id, technique, decided_by, goal, status, started_at, ended_at')
+    .eq('user_id', session.user.id)
+    .order('started_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    throw error;
+  }
+
+  const sessions: SessionRecord[] = (data ?? []).map(row =>
+    mapSessionRow(row as SessionRow)
+  );
+
+  return (
+    <DashboardClient
+      userEmail={session.user.email ?? null}
+      sessions={sessions}
+    />
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '../../components/ui';

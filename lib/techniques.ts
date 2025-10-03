@@ -3,6 +3,10 @@ export type TechniqueKey =
   | 'body_scan'
   | 'mindfulness'
   | 'loving_kindness'
+  | 'mantra'
+  | 'transcendental'
+  | 'zen'
+  | 'yoga_nidra'
   | 'nadi_shodhana';
 
 type BreathPattern = {
@@ -116,6 +120,98 @@ const TECHNIQUES: Technique[] = [
       'Repeat phrases like “May I be at ease”',
       'Extend the wishes to someone you love',
       'Radiate the well-wishing outward',
+    ],
+  },
+  {
+    key: 'mantra',
+    name: 'Mantra Meditation',
+    description:
+      'Silently repeat a chosen phrase to steady the mind and invite clarity.',
+    intention: 'Soften distractions by resting on a gentle mantra.',
+    defaultDurationMinutes: 15,
+    benefits: [
+      'Improves concentration',
+      'Eases anxious rumination',
+      'Supports consistent daily practice',
+    ],
+    pattern: {
+      inhale: 4,
+      exhale: 4,
+    },
+    cues: [
+      'Select a soothing word or phrase',
+      'Whisper it mentally on each breath',
+      'If thoughts arise, notice and return',
+      'Close with a few grateful breaths',
+    ],
+  },
+  {
+    key: 'transcendental',
+    name: 'Transcendental Ease',
+    description:
+      'Settle deeply beyond thought with effortless mantra repetition.',
+    intention: 'Rest in quiet alertness beneath surface-level thinking.',
+    defaultDurationMinutes: 20,
+    benefits: [
+      'Reduces stress hormones',
+      'Enhances emotional resilience',
+      'Encourages deeply restorative rest',
+    ],
+    pattern: {
+      inhale: 4,
+      exhale: 4,
+    },
+    cues: [
+      'Sit comfortably with eyes closed',
+      'Repeat your personal mantra softly',
+      'Allow attention to drift as needed',
+      'Return gently when you notice wandering',
+    ],
+  },
+  {
+    key: 'zen',
+    name: 'Zen Stillness',
+    description:
+      'Practice upright stillness with attention on the breath and posture.',
+    intention: 'Cultivate calm alertness and spacious awareness.',
+    defaultDurationMinutes: 25,
+    benefits: [
+      'Builds equanimity',
+      'Encourages disciplined focus',
+      'Deepens body-breath connection',
+    ],
+    pattern: {
+      inhale: 4,
+      exhale: 6,
+    },
+    cues: [
+      'Sit tall with relaxed shoulders',
+      'Let the breath flow through the nose',
+      'Count the breath from one to ten',
+      'Reset the count when the mind wanders',
+    ],
+  },
+  {
+    key: 'yoga_nidra',
+    name: 'Yoga Nidra Drift',
+    description:
+      'Guide awareness through the body and imagination for deep rest.',
+    intention: 'Melt into profound relaxation while remaining gently aware.',
+    defaultDurationMinutes: 30,
+    benefits: [
+      'Supports restorative sleep',
+      'Soothes chronic tension',
+      'Restores nervous system balance',
+    ],
+    pattern: {
+      inhale: 4,
+      exhale: 6,
+    },
+    cues: [
+      'Settle into a reclined, supported posture',
+      'Rotate awareness through the body slowly',
+      'Visualise comforting imagery or light',
+      'Stay awake with effortless, slow breathing',
     ],
   },
   {

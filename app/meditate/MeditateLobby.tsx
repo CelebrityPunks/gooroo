@@ -1,9 +1,3 @@
-import MeditateLobby from './MeditateLobby';
-import { listTechniques } from '../../lib/techniques';
-
-export default function MeditatePage() {
-  const techniques = listTechniques();
-  return <MeditateLobby techniques={techniques} />;
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -13,9 +7,11 @@ import {
   chooseTechniqueForProfile,
   formatPattern,
   getTechniqueByKey,
-  listTechniques,
   Goal,
+  listTechniques,
   Mood,
+  Technique,
+  TechniqueKey,
 } from '../../lib/techniques';
 import { createSession } from '../../lib/sessions';
 
@@ -60,16 +56,23 @@ const goalOptions: { label: string; value: Goal; description: string }[] = [
   },
 ];
 
-export default function MeditatePage() {
+interface MeditateLobbyProps {
+  techniques?: Technique[];
+}
+
+export default function MeditateLobby({ techniques }: MeditateLobbyProps) {
   const router = useRouter();
   const [mood, setMood] = useState<Mood>('stressed');
   const [goal, setGoal] = useState<Goal>('calm');
-  const [techniqueKey, setTechniqueKey] = useState('');
+  const [techniqueKey, setTechniqueKey] = useState<TechniqueKey | ''>('');
   const [isGuruSelecting, setIsGuruSelecting] = useState(false);
   const [isUserStarting, setIsUserStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const techniques = useMemo(() => listTechniques(), []);
+  const allTechniques = useMemo(
+    () => techniques ?? listTechniques(),
+    [techniques]
+  );
   const selectedTechnique = useMemo(
     () => getTechniqueByKey(techniqueKey),
     [techniqueKey]
@@ -81,23 +84,27 @@ export default function MeditatePage() {
 
     try {
       const technique = chooseTechniqueForProfile({ mood, goal });
-      const session = createSession({
+      const session = await createSession({
         decidedBy: 'guru',
         techniqueKey: technique.key,
-        metadata: { mood, goal },
+        goal,
       });
 
       router.push(
         `/meditate/live/${session.id}?technique=${technique.key}&decidedBy=guru`
       );
     } catch (err) {
-      setError('Something went wrong while starting your session.');
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong while starting your session.';
+      setError(message);
     } finally {
       setIsGuruSelecting(false);
     }
   };
 
-  const handleTechniqueStart = () => {
+  const handleTechniqueStart = async () => {
     if (!selectedTechnique) {
       setError('Please pick a technique to continue.');
       return;
@@ -107,16 +114,21 @@ export default function MeditatePage() {
     setError(null);
 
     try {
-      const session = createSession({
+      const session = await createSession({
         decidedBy: 'user',
         techniqueKey: selectedTechnique.key,
+        goal,
       });
 
       router.push(
         `/meditate/live/${session.id}?technique=${selectedTechnique.key}&decidedBy=user`
       );
     } catch (err) {
-      setError('Unable to start the selected technique.');
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to start the selected technique.';
+      setError(message);
     } finally {
       setIsUserStarting(false);
     }
@@ -210,88 +222,77 @@ export default function MeditatePage() {
               </div>
             </div>
 
-            <div className='space-y-2'>
-              <Button
-                type='button'
-                className='w-full'
-                onClick={handleGuruDecide}
-                disabled={isGuruSelecting}
-              >
-                {isGuruSelecting ? 'Finding your session…' : 'Let Guru Decide'}
-              </Button>
-              <p className='text-sm text-gray-500 text-center'>
-                We suggest a technique based on your mood and intention.
-              </p>
-            </div>
+            <Button
+              onClick={handleGuruDecide}
+              disabled={isGuruSelecting}
+              className='w-full'
+            >
+              {isGuruSelecting
+                ? 'Finding the right technique…'
+                : 'Let Guru Decide'}
+            </Button>
           </Card>
 
-          <div id='techniques'>
-            <Card className='flex flex-col h-full justify-between space-y-4 p-6'>
-              <div className='space-y-4'>
-                <div>
-                  <h2 className='text-xl font-semibold text-gray-900'>
-                    Pick Technique
-                  </h2>
-                  <p className='text-gray-600'>
-                    Browse the catalog of meditation styles and jump directly
-                    into a live session.
-                  </p>
-                </div>
+          <Card className='p-6 space-y-4'>
+            <div>
+              <h2 className='text-xl font-semibold text-gray-900'>
+                Choose a Technique
+              </h2>
+              <p className='text-gray-600'>
+                Prefer to pick something specific? Explore the catalogue.
+              </p>
+            </div>
 
-                <div className='space-y-3'>
-                  <label className='block text-sm font-medium text-gray-700'>
-                    Choose a technique
-                    <select
-                      value={techniqueKey}
-                      onChange={event => setTechniqueKey(event.target.value)}
-                      className='mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
-                    >
-                      <option value=''>Select...</option>
-                      {techniques.map(technique => (
-                        <option key={technique.key} value={technique.key}>
-                          {technique.name} · {technique.defaultDurationMinutes}{' '}
-                          min
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {selectedTechnique && (
-                    <div className='rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900 space-y-2'>
-                      <p className='font-semibold'>{selectedTechnique.name}</p>
-                      <p>{selectedTechnique.description}</p>
-                      <p className='text-xs uppercase tracking-wide text-blue-600'>
-                        Pattern: {formatPattern(selectedTechnique.pattern)}
-                      </p>
-                      <ul className='list-disc pl-5 space-y-1'>
-                        {selectedTechnique.benefits.map(benefit => (
-                          <li key={benefit}>{benefit}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <Button
+            <div className='space-y-3 max-h-[420px] overflow-y-auto pr-1'>
+              {allTechniques.map(technique => (
+                <button
+                  key={technique.key}
                   type='button'
-                  className='w-full'
-                  variant='outline'
-                  onClick={handleTechniqueStart}
-                  disabled={!selectedTechnique || isUserStarting}
+                  onClick={() => setTechniqueKey(technique.key)}
+                  className={`w-full text-left rounded-lg border p-4 transition-colors ${
+                    techniqueKey === technique.key
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-blue-300'
+                  }`}
                 >
-                  {isUserStarting
-                    ? 'Preparing session…'
-                    : 'Start with this technique'}
-                </Button>
-                <p className='text-sm text-gray-500 text-center'>
-                  You can always switch techniques once you are in the live
-                  room.
-                </p>
-              </div>
-            </Card>
-          </div>
+                  <div className='flex items-start justify-between gap-2'>
+                    <div>
+                      <h3 className='font-semibold text-base'>
+                        {technique.name}
+                      </h3>
+                      <p className='text-sm text-gray-600'>
+                        {technique.description}
+                      </p>
+                    </div>
+                    <span className='text-xs font-medium text-gray-500'>
+                      {technique.defaultDurationMinutes} min
+                    </span>
+                  </div>
+                  <div className='mt-3 space-y-2'>
+                    <p className='text-xs text-gray-700'>
+                      {formatPattern(technique.pattern)}
+                    </p>
+                    <ul className='text-xs text-gray-600 space-y-1 list-disc pl-4'>
+                      {technique.benefits.map(benefit => (
+                        <li key={benefit}>{benefit}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <Button
+              variant='outline'
+              onClick={handleTechniqueStart}
+              disabled={isUserStarting}
+              className='w-full'
+            >
+              {isUserStarting
+                ? 'Launching session…'
+                : 'Start Selected Technique'}
+            </Button>
+          </Card>
         </div>
       </div>
     </div>
