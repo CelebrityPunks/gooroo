@@ -15,7 +15,7 @@ export interface SessionRecord {
   endedAt: string | null;
 }
 
-interface SessionRow {
+export interface SessionRow {
   id: string;
   technique: TechniqueKey | null;
   decided_by: SessionDecision;
@@ -31,7 +31,7 @@ export interface CreateSessionInput {
   goal?: string | null;
 }
 
-function mapRowToRecord(row: SessionRow): SessionRecord {
+export function mapSessionRow(row: SessionRow): SessionRecord {
   return {
     id: row.id,
     techniqueKey: row.technique,
@@ -76,7 +76,7 @@ export async function createSession(
     throw error ?? new Error('Failed to create session.');
   }
 
-  return mapRowToRecord(data);
+  return mapSessionRow(data);
 }
 
 export async function listSessions(): Promise<SessionRecord[]> {
@@ -90,7 +90,7 @@ export async function listSessions(): Promise<SessionRecord[]> {
     throw error ?? new Error('Unable to fetch sessions.');
   }
 
-  return data.map(row => mapRowToRecord(row as SessionRow));
+  return data.map(row => mapSessionRow(row as SessionRow));
 }
 
 export function onSessionsChanged(callback: () => void): () => void {
