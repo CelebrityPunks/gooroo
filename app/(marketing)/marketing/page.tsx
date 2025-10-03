@@ -2,12 +2,12 @@
 
 import React from 'react';
 import nextDynamic from 'next/dynamic';
-import { Card } from '../../components/ui/Card';
+import { Card } from '@/components/ui/Card';
 
 export const dynamic = 'force-dynamic';
 
 const SignInForm = nextDynamic(
-  () => import('../../components/auth/SignInForm').then(mod => mod.SignInForm),
+  () => import('@/components/auth/SignInForm').then(mod => mod.SignInForm),
   { ssr: false }
 );
 
