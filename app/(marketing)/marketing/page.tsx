@@ -3,6 +3,20 @@ import { Card } from '@/components/ui/Card';
 import { SignInForm } from '@/components/auth/SignInForm';
 
 export default function MarketingRoutePage() {
+'use client';
+
+import React from 'react';
+import nextDynamic from 'next/dynamic';
+import { Card } from '@/components/ui/Card';
+
+export const dynamic = 'force-dynamic';
+
+const SignInForm = nextDynamic(
+  () => import('@/components/auth/SignInForm').then(mod => mod.SignInForm),
+  { ssr: false }
+);
+
+export default function MarketingPage() {
   return (
     <div className='flex min-h-screen flex-col items-center justify-center p-24'>
       <div className='z-10 max-w-5xl w-full items-center justify-between font-mono text-sm'>
