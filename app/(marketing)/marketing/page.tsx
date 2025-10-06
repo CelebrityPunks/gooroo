@@ -1,13 +1,6 @@
-'use client';
-
 import React from 'react';
-import nextDynamic from 'next/dynamic';
 import { Card } from '@/components/ui/Card';
-
-const SignInForm = nextDynamic(
-  () => import('@/components/auth/SignInForm').then(mod => mod.SignInForm),
-  { ssr: false }
-);
+import { SignInForm } from '@/components/auth/SignInForm';
 
 export default function MarketingRoutePage() {
   return (
