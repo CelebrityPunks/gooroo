@@ -1,3 +1,8 @@
+import React from 'react';
+import { Card } from '@/components/ui/Card';
+import { SignInForm } from '@/components/auth/SignInForm';
+
+export default function MarketingRoutePage() {
 'use client';
 
 import React from 'react';
