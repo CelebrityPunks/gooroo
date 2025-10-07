@@ -1,9 +1,14 @@
 import { redirect } from 'next/navigation';
 import DashboardClient from './DashboardClient';
+import { AUTH_ENABLED } from '../../lib/config';
 import { createClient } from '../../lib/supabaseServer';
 import { mapSessionRow, SessionRecord, SessionRow } from '../../lib/sessions';
 
 export default async function DashboardPage() {
+  if (!AUTH_ENABLED) {
+    redirect('/meditate');
+  }
+
   const supabase = createClient();
   const {
     data: { session },
