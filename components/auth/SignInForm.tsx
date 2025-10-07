@@ -17,10 +17,14 @@ export function SignInForm() {
 
     try {
       const supabase = createClient();
+      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim();
+      const redirectOrigin = siteUrl
+        ? siteUrl.replace(/\/$/, '')
+        : window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${redirectOrigin}/auth/callback`,
         },
       });
 

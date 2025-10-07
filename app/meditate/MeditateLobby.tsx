@@ -89,10 +89,15 @@ export default function MeditateLobby({ techniques }: MeditateLobbyProps) {
         techniqueKey: technique.key,
         goal,
       });
+      const params = new URLSearchParams({
+        technique: technique.key,
+        decidedBy: 'guru',
+      });
+      if (goal) {
+        params.set('goal', goal);
+      }
 
-      router.push(
-        `/meditate/live/${session.id}?technique=${technique.key}&decidedBy=guru`
-      );
+      router.push(`/meditate/live/${session.id}?${params.toString()}`);
     } catch (err) {
       const message =
         err instanceof Error
@@ -119,10 +124,15 @@ export default function MeditateLobby({ techniques }: MeditateLobbyProps) {
         techniqueKey: selectedTechnique.key,
         goal,
       });
+      const params = new URLSearchParams({
+        technique: selectedTechnique.key,
+        decidedBy: 'user',
+      });
+      if (goal) {
+        params.set('goal', goal);
+      }
 
-      router.push(
-        `/meditate/live/${session.id}?technique=${selectedTechnique.key}&decidedBy=user`
-      );
+      router.push(`/meditate/live/${session.id}?${params.toString()}`);
     } catch (err) {
       const message =
         err instanceof Error

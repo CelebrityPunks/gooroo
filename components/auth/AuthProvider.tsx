@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { AUTH_ENABLED } from '../../lib/config';
 import { createClient } from '../../lib/supabaseClient';
 
 interface AuthContextType {
@@ -19,6 +20,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!AUTH_ENABLED) {
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
 
     // Get initial session
@@ -31,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     };
 
-    getInitialSession();
+    void getInitialSession();
 
     // Listen for auth changes
     const {
@@ -46,6 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    if (!AUTH_ENABLED) {
+      return;
+    }
+
     const supabase = createClient();
     await supabase.auth.signOut();
   };
