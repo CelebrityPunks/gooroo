@@ -1,4 +1,5 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { AUTH_ENABLED } from './config';
 import { createClient } from './supabaseClient';
 import { TechniqueKey } from './techniques';
 
@@ -31,6 +32,14 @@ export interface CreateSessionInput {
   goal?: string | null;
 }
 
+function generateSessionId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return Math.random().toString(36).slice(2, 10);
+}
+
 export function mapSessionRow(row: SessionRow): SessionRecord {
   return {
     id: row.id,
@@ -46,6 +55,18 @@ export function mapSessionRow(row: SessionRow): SessionRecord {
 export async function createSession(
   input: CreateSessionInput
 ): Promise<SessionRecord> {
+  if (!AUTH_ENABLED) {
+    return {
+      id: generateSessionId(),
+      techniqueKey: input.techniqueKey,
+      decidedBy: input.decidedBy,
+      goal: input.goal ?? null,
+      status: 'live',
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+    };
+  }
+
   const supabase = createClient();
   const {
     data: { user },
@@ -80,6 +101,10 @@ export async function createSession(
 }
 
 export async function listSessions(): Promise<SessionRecord[]> {
+  if (!AUTH_ENABLED) {
+    return [];
+  }
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from('sessions')
@@ -94,6 +119,12 @@ export async function listSessions(): Promise<SessionRecord[]> {
 }
 
 export function onSessionsChanged(callback: () => void): () => void {
+  if (!AUTH_ENABLED) {
+    return () => {
+      /* no-op */
+    };
+  }
+
   const supabase = createClient();
   const channel: RealtimeChannel = supabase
     .channel('public:sessions')
@@ -122,6 +153,10 @@ export async function recordSessionEvent(
   sessionId: string,
   input: SessionEventInput
 ): Promise<void> {
+  if (!AUTH_ENABLED) {
+    return;
+  }
+
   const supabase = createClient();
   const { error } = await supabase.from('session_events').insert({
     session_id: sessionId,
@@ -138,6 +173,10 @@ export async function setSessionStatus(
   sessionId: string,
   status: SessionStatus
 ): Promise<void> {
+  if (!AUTH_ENABLED) {
+    return;
+  }
+
   const supabase = createClient();
   const endedAt = status === 'live' ? null : new Date().toISOString();
 
@@ -164,6 +203,10 @@ export async function logSessionReflection(
   sessionId: string,
   input: SessionReflectionInput
 ): Promise<void> {
+  if (!AUTH_ENABLED) {
+    return;
+  }
+
   const supabase = createClient();
   const timestamp = new Date().toISOString();
 

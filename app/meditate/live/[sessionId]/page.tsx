@@ -2,6 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import LiveSessionView from './LiveSessionView';
 import { getTechniqueByKey, TechniqueKey } from '../../../../lib/techniques';
+import { AUTH_ENABLED } from '../../../../lib/config';
 import { createClient } from '../../../../lib/supabaseServer';
 import type { SessionStatus } from '../../../../lib/sessions';
 
@@ -28,19 +29,27 @@ export default async function LiveSessionPage({
   searchParams,
 }: LiveSessionPageProps) {
   const { sessionId } = params;
-  const supabase = createClient();
+  let data: SessionRow | null = null;
+  let loadError: string | null = null;
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('technique, decided_by, goal, status, started_at')
-    .eq('id', sessionId)
-    .maybeSingle<SessionRow>();
+  if (AUTH_ENABLED) {
+    const supabase = createClient();
+    const response = await supabase
+      .from('sessions')
+      .select('technique, decided_by, goal, status, started_at')
+      .eq('id', sessionId)
+      .maybeSingle<SessionRow>();
 
-  if (!data && !searchParams?.technique) {
-    notFound();
+    data = response.data ?? null;
+
+    if (!data && !searchParams?.technique) {
+      notFound();
+    }
+
+    if (response.error) {
+      loadError = 'We could not load full session details.';
+    }
   }
-
-  const loadError = error ? 'We could not load full session details.' : null;
 
   const techniqueKey =
     data?.technique ??
@@ -52,8 +61,9 @@ export default async function LiveSessionPage({
     data?.decided_by ??
     'guru';
 
-  const goal = data?.goal ?? null;
-  const startedAt = data?.started_at ?? null;
+  const goal = data?.goal ?? searchParams?.goal ?? null;
+  const startedAt =
+    data?.started_at ?? (!AUTH_ENABLED ? new Date().toISOString() : null);
   const initialStatus: SessionStatus = data?.status ?? 'live';
 
   return (
