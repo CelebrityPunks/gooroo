@@ -13,6 +13,7 @@ interface LiveSessionPageProps {
   searchParams?: {
     technique?: string;
     decidedBy?: string;
+    goal?: string;
   };
 }
 

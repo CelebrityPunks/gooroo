@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { AUTH_ENABLED } from '../../lib/config';
 import { createClient } from '../../lib/supabaseClient';
 import { Button } from '../ui';
 
@@ -9,6 +11,28 @@ export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  if (!AUTH_ENABLED) {
+    return (
+      <div className='space-y-4 text-center'>
+        <div className='space-y-2'>
+          <h3 className='text-lg font-semibold text-gray-900'>
+            Demo mode active
+          </h3>
+          <p className='text-sm text-gray-600'>
+            Email sign-in is disabled for this preview. Jump straight into the
+            meditation lobby to try the guided experience.
+          </p>
+        </div>
+        <Link
+          href='/meditate'
+          className='inline-flex justify-center rounded-lg bg-blue-600 px-5 py-2 text-base font-medium text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+        >
+          Start a Session
+        </Link>
+      </div>
+    );
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
