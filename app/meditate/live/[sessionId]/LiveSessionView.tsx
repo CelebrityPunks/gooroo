@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Card, Button } from '../../../../components/ui';
 import {
   logSessionReflection,
@@ -18,6 +24,21 @@ interface LiveSessionViewProps {
   startedAt: string | null;
   initialStatus: SessionStatus;
   loadError: string | null;
+}
+
+type WebAudioWindow = Window & {
+  AudioContext?: typeof AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+};
+
+function getAudioContextConstructor() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const audioWindow = window as WebAudioWindow;
+
+  return audioWindow.AudioContext || audioWindow.webkitAudioContext || null;
 }
 
 type FeedbackState = {
@@ -57,6 +78,13 @@ export default function LiveSessionView({
   const [clarityScore, setClarityScore] = useState(3);
   const [isSavingReflection, setIsSavingReflection] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [isSoundscapeEnabled, setIsSoundscapeEnabled] = useState(false);
+  const [isSoundscapeLoading, setIsSoundscapeLoading] = useState(false);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
 
   const startedAtLabel = useMemo(() => {
     if (!startedAt) {
@@ -71,10 +99,147 @@ export default function LiveSessionView({
     }).format(new Date(startedAt));
   }, [startedAt]);
 
+  const startedAtDate = useMemo(() => {
+    if (!startedAt) {
+      return null;
+    }
+
+    return new Date(startedAt);
+  }, [startedAt]);
+
+  const isActive = status === 'live';
+
+  useEffect(() => {
+    if (!startedAtDate) {
+      return;
+    }
+
+    setCurrentTime(new Date());
+  }, [startedAtDate]);
+
+  useEffect(() => {
+    if (!startedAtDate || !isActive || isPaused) {
+      return;
+    }
+
+    setCurrentTime(new Date());
+
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isActive, isPaused, startedAtDate]);
+
+  const elapsedSeconds = useMemo(() => {
+    if (!startedAtDate) {
+      return null;
+    }
+
+    const difference = Math.floor(
+      (currentTime.getTime() - startedAtDate.getTime()) / 1000
+    );
+
+    return Math.max(0, difference);
+  }, [currentTime, startedAtDate]);
+
+  const formattedElapsedTime = useMemo(() => {
+    if (elapsedSeconds === null) {
+      return null;
+    }
+
+    const hours = Math.floor(elapsedSeconds / 3600);
+    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+    const seconds = elapsedSeconds % 60;
+
+    const segments = [
+      hours > 0 ? String(hours).padStart(2, '0') : null,
+      String(hours > 0 ? minutes : Math.max(minutes, 0)).padStart(2, '0'),
+      String(seconds).padStart(2, '0'),
+    ].filter(Boolean);
+
+    return segments.join(' : ');
+  }, [elapsedSeconds]);
+
+  const timerStatusLabel = useMemo(() => {
+    if (!isActive) {
+      return statusLabel(status);
+    }
+
+    return isPaused ? 'Paused' : 'Live';
+  }, [isActive, isPaused, status]);
+
+  const timerStatusDetail = useMemo(() => {
+    if (!isActive) {
+      return 'This session is not currently running.';
+    }
+
+    return isPaused
+      ? 'Take a breath. Your timer will resume when you do.'
+      : 'Stay with the flow of your breath while the timer gently tracks your practice.';
+  }, [isActive, isPaused]);
+
+  const ambientParticles = useMemo(
+    () => [
+      {
+        top: '12%',
+        left: '16%',
+        size: '0.85rem',
+        duration: '18s',
+        delay: '0s',
+      },
+      {
+        top: '28%',
+        left: '68%',
+        size: '1.1rem',
+        duration: '24s',
+        delay: '1.5s',
+      },
+      { top: '72%', left: '22%', size: '0.7rem', duration: '20s', delay: '3s' },
+      {
+        top: '58%',
+        left: '78%',
+        size: '0.9rem',
+        duration: '26s',
+        delay: '2.5s',
+      },
+      {
+        top: '42%',
+        left: '36%',
+        size: '0.6rem',
+        duration: '22s',
+        delay: '4.5s',
+      },
+      {
+        top: '18%',
+        left: '82%',
+        size: '0.75rem',
+        duration: '19s',
+        delay: '6s',
+      },
+      {
+        top: '66%',
+        left: '48%',
+        size: '0.95rem',
+        duration: '25s',
+        delay: '5s',
+      },
+      {
+        top: '34%',
+        left: '8%',
+        size: '0.65rem',
+        duration: '21s',
+        delay: '7.5s',
+      },
+    ],
+    []
+  );
+
   const decidedByLabel = decidedBy === 'user' ? 'You' : 'Guru';
   const reflectionButtonLabel =
     status === 'completed' ? 'Update Reflection' : 'Log Reflection';
-  const isActive = status === 'live';
 
   const handleTogglePause = async () => {
     if (!isActive) {
@@ -181,6 +346,133 @@ export default function LiveSessionView({
     }
   };
 
+  const stopSoundscape = useCallback(() => {
+    const audioContext = audioContextRef.current;
+    const oscillator = oscillatorRef.current;
+    const gainNode = gainRef.current;
+
+    if (!audioContext || !gainNode) {
+      return;
+    }
+
+    const now = audioContext.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value || 0.0001, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+
+    window.setTimeout(() => {
+      oscillator?.stop();
+      oscillator?.disconnect();
+      gainNode.disconnect();
+      oscillatorRef.current = null;
+      gainRef.current = null;
+    }, 1600);
+  }, []);
+
+  const handleSoundscapeToggle = useCallback(async () => {
+    if (isSoundscapeEnabled) {
+      stopSoundscape();
+      setIsSoundscapeEnabled(false);
+      setFeedback({
+        type: 'info',
+        message: 'The soundscape will fade out over the next breath.',
+      });
+      return;
+    }
+
+    if (!isActive || isPaused) {
+      setFeedback({
+        type: 'info',
+        message: 'Resume the live session to enable the immersive soundscape.',
+      });
+      return;
+    }
+
+    setIsSoundscapeLoading(true);
+
+    try {
+      if (typeof window === 'undefined') {
+        throw new Error('Sound is only available in the browser.');
+      }
+
+      if (!audioContextRef.current) {
+        const AudioContextConstructor = getAudioContextConstructor();
+
+        if (!AudioContextConstructor) {
+          throw new Error(
+            'Your browser does not support immersive audio playback.'
+          );
+        }
+
+        audioContextRef.current = new AudioContextConstructor();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      if (!audioContext) {
+        throw new Error('We could not initialise the audio engine.');
+      }
+
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
+      const oscillator = audioContext.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 174;
+
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 0.0001;
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+
+      gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.08,
+        audioContext.currentTime + 2
+      );
+
+      oscillatorRef.current = oscillator;
+      gainRef.current = gainNode;
+
+      setIsSoundscapeEnabled(true);
+      setFeedback({
+        type: 'success',
+        message: 'Immersive soundscape engaged. Let the tone guide your focus.',
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'We could not start the soundscape. Please try again.';
+      setFeedback({ type: 'error', message });
+    } finally {
+      setIsSoundscapeLoading(false);
+    }
+  }, [isActive, isPaused, isSoundscapeEnabled, setFeedback, stopSoundscape]);
+
+  useEffect(() => {
+    if (!isActive || isPaused) {
+      if (isSoundscapeEnabled) {
+        stopSoundscape();
+        setIsSoundscapeEnabled(false);
+      }
+    }
+  }, [isActive, isPaused, isSoundscapeEnabled, stopSoundscape]);
+
+  useEffect(() => {
+    return () => {
+      stopSoundscape();
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => undefined);
+        audioContextRef.current = null;
+      }
+    };
+  }, [stopSoundscape]);
+
   return (
     <div className='min-h-screen bg-gray-50 p-8'>
       <div className='max-w-4xl mx-auto space-y-6'>
@@ -213,6 +505,73 @@ export default function LiveSessionView({
             <p className='text-xs text-gray-400'>Started {startedAtLabel}</p>
           )}
         </header>
+
+        {formattedElapsedTime && (
+          <section className='rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 p-[1px] shadow-lg'>
+            <div className='meditation-visual'>
+              <div className='meditation-visual__gradient' aria-hidden='true' />
+              <div
+                className='meditation-visual__orb meditation-visual__orb--primary'
+                aria-hidden='true'
+              />
+              <div
+                className='meditation-visual__orb meditation-visual__orb--secondary'
+                aria-hidden='true'
+              />
+              <div className='meditation-visual__particles' aria-hidden='true'>
+                {ambientParticles.map((particle, index) => (
+                  <span
+                    key={`particle-${index}`}
+                    className='meditation-visual__particle'
+                    style={{
+                      top: particle.top,
+                      left: particle.left,
+                      width: particle.size,
+                      height: particle.size,
+                      animationDuration: particle.duration,
+                      animationDelay: particle.delay,
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className='meditation-visual__content'>
+                <p className='text-xs font-semibold uppercase tracking-[0.35em] text-blue-100/80'>
+                  Session Timer
+                </p>
+                <p className='text-5xl font-bold text-white md:text-6xl'>
+                  {formattedElapsedTime}
+                </p>
+                <p className='max-w-md text-sm text-blue-100/80'>
+                  {timerStatusLabel}
+                </p>
+                <p className='max-w-md text-sm text-blue-100/60'>
+                  {timerStatusDetail}
+                </p>
+                <div className='mt-4 flex flex-wrap items-center gap-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleSoundscapeToggle}
+                    disabled={isSoundscapeLoading}
+                    className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
+                  >
+                    {isSoundscapeEnabled
+                      ? 'Soundscape On'
+                      : isSoundscapeLoading
+                        ? 'Starting…'
+                        : 'Play Soundscape'}
+                  </Button>
+                  <span className='text-xs text-blue-100/70'>
+                    {isSoundscapeEnabled
+                      ? 'Soft harmonic tones are playing to anchor your focus.'
+                      : 'Activate a gentle harmonic tone to accompany your breath.'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {feedback && (
           <div

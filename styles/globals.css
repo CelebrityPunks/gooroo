@@ -25,3 +25,169 @@ body {
     text-wrap: balance;
   }
 }
+
+.meditation-visual {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 18rem;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(59, 130, 246, 0.45),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 80% 30%,
+      rgba(165, 180, 252, 0.35),
+      transparent 60%
+    ),
+    linear-gradient(135deg, rgba(30, 58, 138, 0.85), rgba(15, 23, 42, 0.95));
+  box-shadow:
+    inset 0 0 40px rgba(148, 163, 184, 0.15),
+    0 25px 60px rgba(15, 23, 42, 0.45);
+}
+
+.meditation-visual__gradient {
+  position: absolute;
+  inset: -20%;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(129, 140, 248, 0.2),
+      rgba(56, 189, 248, 0.08),
+      rgba(147, 197, 253, 0.15),
+      rgba(129, 140, 248, 0.25),
+      rgba(56, 189, 248, 0.1)
+    ),
+    radial-gradient(
+      circle at center,
+      rgba(226, 232, 240, 0.25),
+      transparent 60%
+    );
+  animation: meditation-pulse 18s ease-in-out infinite;
+  opacity: 0.75;
+  filter: blur(18px);
+}
+
+.meditation-visual__orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(2px);
+  opacity: 0.9;
+  box-shadow: 0 0 60px rgba(165, 180, 252, 0.35);
+}
+
+.meditation-visual__orb--primary {
+  width: 14rem;
+  height: 14rem;
+  left: 12%;
+  top: 35%;
+  transform: translateY(-50%);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(191, 219, 254, 0.65),
+    rgba(79, 70, 229, 0.3)
+  );
+  animation: meditation-drift 26s ease-in-out infinite;
+}
+
+.meditation-visual__orb--secondary {
+  width: 10rem;
+  height: 10rem;
+  right: 14%;
+  top: 38%;
+  transform: translateY(-50%);
+  background: radial-gradient(
+    circle at 70% 30%,
+    rgba(59, 130, 246, 0.55),
+    rgba(15, 118, 110, 0.35)
+  );
+  animation: meditation-drift 22s ease-in-out infinite reverse;
+}
+
+.meditation-visual__particles {
+  position: absolute;
+  inset: 0;
+}
+
+.meditation-visual__particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(226, 232, 240, 0.75);
+  box-shadow: 0 0 18px rgba(148, 163, 184, 0.55);
+  animation-name: meditation-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+.meditation-visual__content {
+  position: relative;
+  z-index: 1;
+  padding: 3rem;
+  width: 100%;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meditation-visual__content::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 1.5rem;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(148, 163, 184, 0.4),
+    transparent
+  );
+  opacity: 0.5;
+}
+
+@keyframes meditation-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.08) rotate(2deg);
+    opacity: 0.95;
+  }
+}
+
+@keyframes meditation-drift {
+  0% {
+    transform: translate3d(0, -50%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(20px, calc(-50% - 18px), 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-10px, calc(-50% + 6px), 0) scale(1);
+  }
+}
+
+@keyframes meditation-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate3d(18px, -32px, 0) scale(1.2);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(-12px, -64px, 0) scale(0.95);
+    opacity: 0.4;
+  }
+}
