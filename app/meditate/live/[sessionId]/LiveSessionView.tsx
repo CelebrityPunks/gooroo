@@ -27,6 +27,7 @@ interface LiveSessionViewProps {
 }
 
 type WebAudioWindow = Window & {
+  AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
 };
 
