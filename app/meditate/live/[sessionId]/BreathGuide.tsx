@@ -175,6 +175,45 @@ export default function BreathGuide({
     }
   }, []);
 
+  const speakWithBrowserVoice = useCallback(
+    (text: string, controller: AbortController) => {
+      if (typeof window === 'undefined' || !window.speechSynthesis) {
+        return false;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = 0.85;
+      utterance.rate = 0.9;
+      utterance.volume = 0.9;
+
+      utterance.onend = () => {
+        if (fallbackUtteranceRef.current === utterance) {
+          fallbackUtteranceRef.current = null;
+        }
+        if (speechAbortControllerRef.current === controller) {
+          speechAbortControllerRef.current = null;
+        }
+      };
+
+      utterance.onerror = () => {
+        if (fallbackUtteranceRef.current === utterance) {
+          fallbackUtteranceRef.current = null;
+        }
+        if (speechAbortControllerRef.current === controller) {
+          speechAbortControllerRef.current = null;
+        }
+      };
+
+      fallbackUtteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+
+      return true;
+    },
+    []
+  );
+
   const speakPhase = useCallback(
     (nextPhase: BreathPhase, duration: number, nextCycle: number) => {
       cancelSpeech();
