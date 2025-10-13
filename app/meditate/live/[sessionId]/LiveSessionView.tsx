@@ -15,6 +15,7 @@ import {
   SessionStatus,
 } from '../../../../lib/sessions';
 import { formatPattern, Technique } from '../../../../lib/techniques';
+import BreathGuide from './BreathGuide';
 
 interface LiveSessionViewProps {
   sessionId: string;
@@ -571,6 +572,15 @@ export default function LiveSessionView({
               </div>
             </div>
           </section>
+        )}
+
+        {technique && (
+          <BreathGuide
+            pattern={technique.pattern}
+            techniqueName={technique.name}
+            isActive={isActive}
+            isPaused={isPaused}
+          />
         )}
 
         {feedback && (
