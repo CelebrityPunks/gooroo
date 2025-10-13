@@ -129,7 +129,6 @@ export default function BreathGuide({
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioUrlRef = useRef<string | null>(null);
   const speechAbortControllerRef = useRef<AbortController | null>(null);
-  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const introSpokenRef = useRef(false);
 
   useEffect(() => {
@@ -174,12 +173,6 @@ export default function BreathGuide({
       URL.revokeObjectURL(activeAudioUrlRef.current);
       activeAudioUrlRef.current = null;
     }
-
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    fallbackUtteranceRef.current = null;
   }, []);
 
   const speakWithBrowserVoice = useCallback(
@@ -306,18 +299,11 @@ export default function BreathGuide({
             return;
           }
 
-          const fallbackStarted = speakWithBrowserVoice(text, controller);
-
-          if (!fallbackStarted) {
-            // eslint-disable-next-line no-console
-            console.error('Voice guidance playback error', error);
-          }
+          // eslint-disable-next-line no-console
+          console.error('Voice guidance playback error', error);
         })
         .finally(() => {
-          if (
-            speechAbortControllerRef.current === controller &&
-            !fallbackUtteranceRef.current
-          ) {
+          if (speechAbortControllerRef.current === controller) {
             speechAbortControllerRef.current = null;
           }
         });
@@ -326,7 +312,6 @@ export default function BreathGuide({
       cancelSpeech,
       hasHold,
       isVoiceGuideEnabled,
-      speakWithBrowserVoice,
       techniqueDescription,
       techniqueIntention,
       techniqueName,

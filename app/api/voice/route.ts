@@ -36,7 +36,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+  const apiKey =
+    process.env.ELEVENLABS_API_KEY ??
+    'sk_2d973eb0cbaffa4d9012168577035095c9306aec175c24dd';
 
   if (!apiKey) {
     // eslint-disable-next-line no-console
