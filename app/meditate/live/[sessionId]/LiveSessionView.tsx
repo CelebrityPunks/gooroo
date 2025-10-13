@@ -832,6 +832,7 @@ export default function LiveSessionView({
           techniqueDescription={technique.description}
           techniqueIntention={technique.intention}
           isActive={isGuidanceLive}
+          isActive={isActive}
           isPaused={isPaused}
           isVoiceGuideEnabled={isVoiceGuideEnabled}
         />
