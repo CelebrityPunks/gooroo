@@ -14,8 +14,10 @@ A voice-first Next.js app where users speak to an AI Guru who selects and guides
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Set up environment variables (see `.env.example`)
+3. Copy `.env.example` to `.env` and fill in your own secrets
+   - `cp .env.example .env`
    - Provide `ELEVENLABS_API_KEY` with your ElevenLabs secret key
+   - The `.env` file is ignored by git so your secret stays hidden
 4. Run development server: `npm run dev`
 
 ## Architecture
