@@ -177,7 +177,6 @@ export default function BreathGuide({
 
   const speakPhase = useCallback(
     (nextPhase: BreathPhase, duration: number, nextCycle: number) => {
-    (nextPhase: BreathPhase, duration: number) => {
       cancelSpeech();
 
       if (!isVoiceGuideEnabled) {
