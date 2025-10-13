@@ -4,9 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../../../../components/ui';
 import type { Technique } from '../../../../lib/techniques';
 
-const SPEECH_RATE = 0.92;
-const SPEECH_PITCH = 1.05;
-
 type BreathPhase = 'idle' | 'inhale' | 'hold' | 'exhale' | 'complete';
 
 type BreathPattern = Technique['pattern'];
@@ -14,6 +11,8 @@ type BreathPattern = Technique['pattern'];
 interface BreathGuideProps {
   pattern: BreathPattern;
   techniqueName: string;
+  techniqueDescription: string;
+  techniqueIntention: string;
   isActive: boolean;
   isPaused: boolean;
   isVoiceGuideEnabled: boolean;
@@ -27,32 +26,93 @@ function formatDuration(seconds: number) {
   return seconds === 1 ? '1 second' : `${seconds} seconds`;
 }
 
-function createSpeechText(phase: BreathPhase, duration: number) {
-  const roundedDuration = Math.round(duration);
+interface SpeechContext {
+  phase: BreathPhase;
+  duration: number;
+  cycle: number;
+  introDelivered: boolean;
+  techniqueName: string;
+  techniqueDescription: string;
+  techniqueIntention: string;
+}
 
-  switch (phase) {
-    case 'inhale':
-      return roundedDuration > 0
-        ? `Inhale for ${formatDuration(roundedDuration)}.`
-        : 'Inhale.';
-    case 'hold':
-      return roundedDuration > 0
-        ? `Hold gently for ${formatDuration(roundedDuration)}.`
-        : 'Hold the breath softly.';
-    case 'exhale':
-      return roundedDuration > 0
-        ? `Exhale for ${formatDuration(roundedDuration)}.`
-        : 'Exhale.';
-    case 'complete':
-      return 'Guided breathing complete. Continue at your own pace.';
-    default:
-      return '';
+function createSpeechText(
+  {
+    phase,
+    duration,
+    cycle,
+    introDelivered,
+    techniqueDescription,
+    techniqueIntention,
+    techniqueName,
+  }: SpeechContext,
+  hasHold: boolean
+) {
+  if (phase === 'complete') {
+    return 'Guided breathing complete. Continue at your own pace.';
   }
+
+  const roundedDuration = Math.max(0, Math.round(duration));
+  const durationLabel =
+    roundedDuration > 0 ? formatDuration(roundedDuration) : '';
+
+  const simpleByPhase: Record<
+    Exclude<BreathPhase, 'idle' | 'complete'>,
+    string
+  > = {
+    inhale: 'Inhale.',
+    hold: hasHold ? 'Rest.' : 'Hold softly.',
+    exhale: 'Exhale.',
+  };
+
+  const timedByPhase: Record<
+    Exclude<BreathPhase, 'idle' | 'complete'>,
+    string
+  > = {
+    inhale:
+      durationLabel && durationLabel.length > 0
+        ? `Inhale for ${durationLabel}.`
+        : simpleByPhase.inhale,
+    hold:
+      durationLabel && durationLabel.length > 0
+        ? `${hasHold ? 'Rest' : 'Hold'} for ${durationLabel}.`
+        : simpleByPhase.hold,
+    exhale:
+      durationLabel && durationLabel.length > 0
+        ? `Exhale for ${durationLabel}.`
+        : simpleByPhase.exhale,
+  };
+
+  if (cycle === 1) {
+    if (phase === 'inhale' && !introDelivered) {
+      const introSegments = [
+        `Welcome to ${techniqueName}.`,
+        techniqueDescription,
+        techniqueIntention,
+      ].filter(Boolean);
+
+      introSegments.push(timedByPhase.inhale);
+
+      return introSegments.join(' ');
+    }
+
+    if (phase in timedByPhase) {
+      return timedByPhase[phase as keyof typeof timedByPhase];
+    }
+  }
+
+  if (phase in simpleByPhase) {
+    return simpleByPhase[phase as keyof typeof simpleByPhase];
+  }
+
+  return '';
 }
 
 export default function BreathGuide({
   pattern,
   techniqueName,
+  techniqueDescription,
+  techniqueIntention,
   isActive,
   isPaused,
   isVoiceGuideEnabled,
@@ -66,6 +126,10 @@ export default function BreathGuide({
   const timeoutsRef = useRef<number[]>([]);
   const isActiveRef = useRef(isActive);
   const isPausedRef = useRef(isPaused);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activeAudioUrlRef = useRef<string | null>(null);
+  const speechAbortControllerRef = useRef<AbortController | null>(null);
+  const introSpokenRef = useRef(false);
 
   useEffect(() => {
     isActiveRef.current = isActive;
@@ -95,37 +159,128 @@ export default function BreathGuide({
     [pattern.exhale, pattern.hold, pattern.inhale]
   );
 
+  useEffect(() => {
+    introSpokenRef.current = false;
+  }, [durations.exhale, durations.hold, durations.inhale, techniqueName]);
+
   const cancelSpeech = useCallback(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return;
+    speechAbortControllerRef.current?.abort();
+    speechAbortControllerRef.current = null;
+
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current.currentTime = 0;
+      activeAudioRef.current = null;
     }
 
-    window.speechSynthesis.cancel();
+    if (activeAudioUrlRef.current) {
+      URL.revokeObjectURL(activeAudioUrlRef.current);
+      activeAudioUrlRef.current = null;
+    }
   }, []);
 
   const speakPhase = useCallback(
-    (nextPhase: BreathPhase, duration: number) => {
-      if (
-        typeof window === 'undefined' ||
-        !('speechSynthesis' in window) ||
-        !isVoiceGuideEnabled
-      ) {
-        cancelSpeech();
+    (nextPhase: BreathPhase, duration: number, nextCycle: number) => {
+      cancelSpeech();
+
+      if (!isVoiceGuideEnabled) {
         return;
       }
 
-      const text = createSpeechText(nextPhase, duration);
+      const text = createSpeechText(
+        {
+          phase: nextPhase,
+          duration,
+          cycle: nextCycle,
+          introDelivered: introSpokenRef.current,
+          techniqueDescription,
+          techniqueIntention,
+          techniqueName,
+        },
+        hasHold
+      );
       if (!text) {
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = SPEECH_RATE;
-      utterance.pitch = SPEECH_PITCH;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      if (
+        nextPhase === 'inhale' &&
+        nextCycle === 1 &&
+        !introSpokenRef.current
+      ) {
+        introSpokenRef.current = true;
+      }
+
+      const controller = new AbortController();
+      speechAbortControllerRef.current = controller;
+
+      void fetch('/api/voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error('Failed to retrieve guided audio');
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+
+          activeAudioRef.current = audio;
+          activeAudioUrlRef.current = url;
+
+          audio.onended = () => {
+            if (activeAudioRef.current === audio) {
+              activeAudioRef.current = null;
+            }
+            if (activeAudioUrlRef.current === url) {
+              URL.revokeObjectURL(url);
+              activeAudioUrlRef.current = null;
+            }
+          };
+
+          audio.onerror = () => {
+            if (activeAudioUrlRef.current === url) {
+              URL.revokeObjectURL(url);
+              activeAudioUrlRef.current = null;
+            }
+          };
+
+          await audio.play();
+        })
+        .catch(error => {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          // eslint-disable-next-line no-console
+          console.error('Voice guidance playback error', error);
+        })
+        .finally(() => {
+          if (speechAbortControllerRef.current === controller) {
+            speechAbortControllerRef.current = null;
+          }
+        });
     },
-    [cancelSpeech, isVoiceGuideEnabled]
+    [
+      cancelSpeech,
+      hasHold,
+      isVoiceGuideEnabled,
+      techniqueDescription,
+      techniqueIntention,
+      techniqueName,
+    ]
   );
 
   const clearTimers = useCallback(() => {
@@ -151,7 +306,7 @@ export default function BreathGuide({
       setPhaseDuration(duration);
       setPhaseStartedAt(Date.now());
       setPhaseProgress(0);
-      speakPhase(nextPhase, duration);
+      speakPhase(nextPhase, duration, nextCycle);
 
       const phaseIndex = phaseOrder.indexOf(nextPhase);
       const safePhaseIndex = phaseIndex >= 0 ? phaseIndex : 0;
@@ -174,7 +329,7 @@ export default function BreathGuide({
           setPhaseDuration(0);
           setPhaseStartedAt(null);
           setPhaseProgress(0);
-          speakPhase('complete', 0);
+          speakPhase('complete', 0, nextCycleCount);
         }, waitDuration);
         timeoutsRef.current.push(completionId);
         return;
@@ -198,10 +353,18 @@ export default function BreathGuide({
     }
   }, [cancelSpeech, isVoiceGuideEnabled]);
 
+  useEffect(
+    () => () => {
+      cancelSpeech();
+    },
+    [cancelSpeech]
+  );
+
   useEffect(() => {
     if (!isActive) {
       clearTimers();
       cancelSpeech();
+      introSpokenRef.current = false;
       setPhase('idle');
       setCycle(1);
       setPhaseDuration(pattern.inhale);
@@ -213,11 +376,13 @@ export default function BreathGuide({
     if (isPaused) {
       clearTimers();
       cancelSpeech();
+      introSpokenRef.current = false;
       return;
     }
 
     clearTimers();
     cancelSpeech();
+    introSpokenRef.current = false;
     schedulePhase('inhale', 1);
 
     return () => {
