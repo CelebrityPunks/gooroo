@@ -7,7 +7,7 @@ A voice-first Next.js app where users speak to an AI Guru who selects and guides
 - **Frontend**: Next.js (App Router, RSC), React, TypeScript, Tailwind
 - **Backend**: Next.js Route Handlers, Supabase Edge Functions
 - **Database**: Supabase (Postgres + RLS, Auth, Realtime, Storage)
-- **Audio**: Web Audio API, Web Speech API, streaming TTS
+- **Audio**: Web Audio API with ElevenLabs TTS for narrated guidance
 - **State**: Zustand (UI/session), React Context (auth)
 
 ## Quick Start
@@ -15,6 +15,7 @@ A voice-first Next.js app where users speak to an AI Guru who selects and guides
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Set up environment variables (see `.env.example`)
+   - Provide `ELEVENLABS_API_KEY` with your ElevenLabs secret key
 4. Run development server: `npm run dev`
 
 ## Architecture
