@@ -345,15 +345,13 @@ export default function BreathGuide({
   const progressPercentage = Math.min(100, Math.max(0, phaseProgress * 100));
 
   return (
-    <Card className='p-6 shadow-sm border border-blue-100 bg-white'>
+    <Card className='p-6 backdrop-blur-lg bg-white/10'>
       <div className='flex flex-col items-center gap-6 text-center'>
         <div className='space-y-1'>
-          <p className='text-xs font-semibold uppercase tracking-[0.35em] text-blue-500'>
+          <p className='text-xs font-semibold uppercase tracking-[0.35em] text-blue-200/80'>
             Breath Guidance
           </p>
-          <h2 className='text-xl font-semibold text-gray-900'>
-            {techniqueName}
-          </h2>
+          <h2 className='text-xl font-semibold text-white'>{techniqueName}</h2>
         </div>
 
         <div className='relative flex items-center justify-center'>
@@ -366,29 +364,29 @@ export default function BreathGuide({
             <div className='absolute inset-1 rounded-full border border-white/20' />
           </div>
           <div className='absolute flex h-44 w-44 items-center justify-center'>
-            <span className='text-lg font-semibold text-slate-800 drop-shadow-sm'>
+            <span className='text-lg font-semibold text-white drop-shadow-[0_6px_18px_rgba(15,23,42,0.45)]'>
               {phaseLabel}
             </span>
           </div>
         </div>
 
         <div className='w-full max-w-xs space-y-2'>
-          <div className='h-2 w-full overflow-hidden rounded-full bg-blue-100'>
+          <div className='h-2 w-full overflow-hidden rounded-full bg-white/15 backdrop-blur-sm'>
             <div
               className='h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 transition-all duration-150 ease-linear'
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <p className='text-sm font-medium text-gray-700'>{cycleLabel}</p>
+          <p className='text-sm font-medium text-slate-100/85'>{cycleLabel}</p>
           {secondsRemaining !== null && (
-            <p className='text-xs uppercase tracking-wide text-gray-500'>
+            <p className='text-xs uppercase tracking-wide text-slate-100/60'>
               {secondsRemaining > 0
                 ? `${secondsRemaining}s remaining in this phase`
                 : 'Transitioning to the next phase'}
             </p>
           )}
           {phase === 'complete' && (
-            <p className='text-xs text-gray-500'>
+            <p className='text-xs text-slate-100/60'>
               Continue at your own pace or pause the session when you are ready.
             </p>
           )}

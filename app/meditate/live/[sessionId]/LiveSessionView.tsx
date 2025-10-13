@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Button } from '../../../../components/ui';
 import {
   logSessionReflection,
@@ -69,6 +70,7 @@ export default function LiveSessionView({
   initialStatus,
   loadError,
 }: LiveSessionViewProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<SessionStatus>(initialStatus);
   const [isPaused, setIsPaused] = useState(false);
   const [isTogglingPause, setIsTogglingPause] = useState(false);
@@ -295,6 +297,7 @@ export default function LiveSessionView({
         message:
           'Session marked as ended. You can start a fresh practice anytime.',
       });
+      router.push('/meditate');
     } catch (error) {
       const message =
         error instanceof Error
@@ -475,311 +478,324 @@ export default function LiveSessionView({
   }, [stopSoundscape]);
 
   return (
-    <div className='min-h-screen bg-gray-50 p-8'>
-      <div className='max-w-4xl mx-auto space-y-6'>
-        <header className='space-y-2 text-center'>
-          <h1 className='text-3xl font-bold text-gray-900'>Live Session</h1>
-          <p className='text-gray-600'>
-            Session ID{' '}
-            <span className='font-mono text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded'>
-              {sessionId}
-            </span>
-          </p>
-          {loadError && <p className='text-xs text-red-500'>{loadError}</p>}
-          <p className='text-sm text-gray-500'>
-            Status: {statusLabel(status)}
-            {isPaused ? ' · Paused' : ''}
-          </p>
-          {technique && (
-            <p className='text-gray-500 text-sm'>
-              {decidedByLabel} selected{' '}
-              <span className='font-semibold'>{technique.name}</span> to guide
-              this practice.
-            </p>
-          )}
-          {goal && (
-            <p className='text-xs text-gray-400'>
-              Goal for this session: {goal}
-            </p>
-          )}
-          {startedAtLabel && (
-            <p className='text-xs text-gray-400'>Started {startedAtLabel}</p>
-          )}
-        </header>
-
-        {formattedElapsedTime && (
-          <section className='rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 p-[1px] shadow-lg'>
-            <div className='meditation-visual'>
-              <div className='meditation-visual__gradient' aria-hidden='true' />
-              <div
-                className='meditation-visual__orb meditation-visual__orb--primary'
-                aria-hidden='true'
-              />
-              <div
-                className='meditation-visual__orb meditation-visual__orb--secondary'
-                aria-hidden='true'
-              />
-              <div className='meditation-visual__particles' aria-hidden='true'>
-                {ambientParticles.map((particle, index) => (
-                  <span
-                    key={`particle-${index}`}
-                    className='meditation-visual__particle'
-                    style={{
-                      top: particle.top,
-                      left: particle.left,
-                      width: particle.size,
-                      height: particle.size,
-                      animationDuration: particle.duration,
-                      animationDelay: particle.delay,
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div className='meditation-visual__content'>
-                <p className='text-xs font-semibold uppercase tracking-[0.35em] text-blue-100/80'>
-                  Session Timer
-                </p>
-                <p className='text-5xl font-bold text-white md:text-6xl'>
-                  {formattedElapsedTime}
-                </p>
-                <p className='max-w-md text-sm text-blue-100/80'>
-                  {timerStatusLabel}
-                </p>
-                <p className='max-w-md text-sm text-blue-100/60'>
-                  {timerStatusDetail}
-                </p>
-                <div className='mt-4 flex flex-wrap items-center gap-3'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={handleSoundscapeToggle}
-                    disabled={isSoundscapeLoading}
-                    className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
-                  >
-                    {isSoundscapeEnabled
-                      ? 'Soundscape On'
-                      : isSoundscapeLoading
-                        ? 'Starting…'
-                        : 'Play Soundscape'}
-                  </Button>
-                  <span className='text-xs text-blue-100/70'>
-                    {isSoundscapeEnabled
-                      ? 'Soft harmonic tones are playing to anchor your focus.'
-                      : 'Activate a gentle harmonic tone to accompany your breath.'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
+    <div className='mx-auto flex w-full max-w-5xl flex-col gap-6'>
+      <header className='space-y-3 text-center'>
+        <h1 className='text-3xl font-semibold text-white md:text-4xl'>
+          Live Session
+        </h1>
+        <p className='text-sm text-slate-100/70'>
+          Session ID{' '}
+          <span className='ml-1 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 font-mono text-xs uppercase tracking-[0.22em] text-blue-100/90 shadow-inner'>
+            {sessionId}
+          </span>
+        </p>
+        {loadError && (
+          <p className='text-xs font-semibold text-rose-300'>{loadError}</p>
         )}
-
+        <p className='text-sm text-slate-100/60'>
+          Status: {statusLabel(status)}
+          {isPaused ? ' · Paused' : ''}
+        </p>
         {technique && (
-          <BreathGuide
-            pattern={technique.pattern}
-            techniqueName={technique.name}
-            isActive={isActive}
-            isPaused={isPaused}
-          />
+          <p className='text-sm text-slate-100/70'>
+            {decidedByLabel} selected{' '}
+            <span className='font-semibold text-white'>{technique.name}</span>{' '}
+            to guide this practice.
+          </p>
         )}
+        {goal && (
+          <p className='text-xs uppercase tracking-[0.35em] text-blue-100/70'>
+            Goal for this session: {goal}
+          </p>
+        )}
+        {startedAtLabel && (
+          <p className='text-xs text-blue-100/60'>Started {startedAtLabel}</p>
+        )}
+      </header>
 
-        {feedback && (
-          <div
-            className={`rounded-lg border px-4 py-3 text-sm ${
-              feedback.type === 'success'
-                ? 'border-green-200 bg-green-50 text-green-700'
-                : feedback.type === 'error'
-                  ? 'border-red-200 bg-red-50 text-red-700'
-                  : 'border-blue-200 bg-blue-50 text-blue-700'
-            }`}
-          >
-            <div className='flex items-start justify-between gap-4'>
-              <span>{feedback.message}</span>
-              <button
-                type='button'
-                onClick={() => setFeedback(null)}
-                className='text-xs font-semibold uppercase tracking-wide'
-              >
-                Dismiss
-              </button>
+      {formattedElapsedTime && (
+        <section className='rounded-3xl border border-white/20 bg-gradient-to-br from-blue-900/80 via-indigo-900/80 to-slate-900/80 p-[1px] shadow-2xl'>
+          <div className='meditation-visual'>
+            <div className='meditation-visual__gradient' aria-hidden='true' />
+            <div
+              className='meditation-visual__orb meditation-visual__orb--primary'
+              aria-hidden='true'
+            />
+            <div
+              className='meditation-visual__orb meditation-visual__orb--secondary'
+              aria-hidden='true'
+            />
+            <div className='meditation-visual__particles' aria-hidden='true'>
+              {ambientParticles.map((particle, index) => (
+                <span
+                  key={`particle-${index}`}
+                  className='meditation-visual__particle'
+                  style={{
+                    top: particle.top,
+                    left: particle.left,
+                    width: particle.size,
+                    height: particle.size,
+                    animationDuration: particle.duration,
+                    animationDelay: particle.delay,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className='meditation-visual__content'>
+              <p className='text-xs font-semibold uppercase tracking-[0.35em] text-blue-100/80'>
+                Session Timer
+              </p>
+              <p className='text-5xl font-bold text-white md:text-6xl'>
+                {formattedElapsedTime}
+              </p>
+              <p className='max-w-md text-sm text-blue-100/80'>
+                {timerStatusLabel}
+              </p>
+              <p className='max-w-md text-sm text-blue-100/60'>
+                {timerStatusDetail}
+              </p>
+              <div className='mt-4 flex flex-wrap items-center gap-3'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={handleSoundscapeToggle}
+                  disabled={isSoundscapeLoading}
+                  className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
+                >
+                  {isSoundscapeEnabled
+                    ? 'Soundscape On'
+                    : isSoundscapeLoading
+                      ? 'Starting…'
+                      : 'Play Soundscape'}
+                </Button>
+                <span className='text-xs text-blue-100/70'>
+                  {isSoundscapeEnabled
+                    ? 'Soft harmonic tones are playing to anchor your focus.'
+                    : 'Activate a gentle harmonic tone to accompany your breath.'}
+                </span>
+              </div>
             </div>
           </div>
-        )}
+        </section>
+      )}
 
-        {technique ? (
-          <Card className='space-y-4 p-6'>
-            <div className='space-y-1'>
-              <h2 className='text-2xl font-semibold text-gray-900'>
-                {technique.name}
-              </h2>
-              <p className='text-gray-600'>{technique.description}</p>
-              <p className='text-sm uppercase tracking-wide text-blue-600'>
-                Pattern: {formatPattern(technique.pattern)} ·{' '}
-                {technique.defaultDurationMinutes} min
-              </p>
-            </div>
+      {technique && (
+        <BreathGuide
+          pattern={technique.pattern}
+          techniqueName={technique.name}
+          isActive={isActive}
+          isPaused={isPaused}
+        />
+      )}
 
-            <div className='grid gap-3 md:grid-cols-2'>
-              <Card className='border-blue-100 bg-blue-50 p-4'>
-                <h3 className='text-sm font-semibold text-blue-900 uppercase tracking-wide'>
-                  Intention
-                </h3>
-                <p className='text-blue-900 mt-1'>{technique.intention}</p>
-              </Card>
+      {feedback && (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm shadow-lg backdrop-blur-md ${
+            feedback.type === 'success'
+              ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+              : feedback.type === 'error'
+                ? 'border-rose-400/40 bg-rose-500/10 text-rose-100'
+                : 'border-sky-400/40 bg-sky-500/10 text-sky-100'
+          }`}
+        >
+          <div className='flex items-start justify-between gap-4'>
+            <span className='leading-relaxed'>{feedback.message}</span>
+            <button
+              type='button'
+              onClick={() => setFeedback(null)}
+              className='text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:text-white'
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
-              <Card className='border-green-100 bg-green-50 p-4'>
-                <h3 className='text-sm font-semibold text-green-900 uppercase tracking-wide'>
-                  Benefits
-                </h3>
-                <ul className='mt-1 list-disc space-y-1 pl-4 text-green-900'>
-                  {technique.benefits.map(benefit => (
-                    <li key={benefit}>{benefit}</li>
-                  ))}
-                </ul>
-              </Card>
-            </div>
+      {technique ? (
+        <Card className='space-y-6 p-6'>
+          <div className='space-y-2'>
+            <h2 className='text-2xl font-semibold text-white'>
+              {technique.name}
+            </h2>
+            <p className='text-sm leading-relaxed text-slate-100/80'>
+              {technique.description}
+            </p>
+            <p className='text-xs uppercase tracking-[0.35em] text-blue-200/80'>
+              Pattern: {formatPattern(technique.pattern)} ·{' '}
+              {technique.defaultDurationMinutes} min
+            </p>
+          </div>
 
-            <div className='space-y-2'>
-              <h3 className='text-sm font-semibold text-gray-900 uppercase tracking-wide'>
-                Guidance cues
+          <div className='grid gap-3 md:grid-cols-2'>
+            <Card className='border-sky-400/40 bg-sky-500/10 p-4 text-sky-100'>
+              <h3 className='text-xs font-semibold uppercase tracking-[0.3em] text-sky-100/80'>
+                Intention
               </h3>
-              <ul className='list-disc space-y-1 pl-5 text-gray-700'>
-                {technique.cues.map(cue => (
-                  <li key={cue}>{cue}</li>
+              <p className='mt-1 text-sm leading-relaxed text-sky-50/90'>
+                {technique.intention}
+              </p>
+            </Card>
+
+            <Card className='border-emerald-400/35 bg-emerald-500/10 p-4 text-emerald-100'>
+              <h3 className='text-xs font-semibold uppercase tracking-[0.3em] text-emerald-100/80'>
+                Benefits
+              </h3>
+              <ul className='mt-1 list-disc space-y-1 pl-4 text-sm text-emerald-50/90'>
+                {technique.benefits.map(benefit => (
+                  <li key={benefit}>{benefit}</li>
                 ))}
               </ul>
-            </div>
+            </Card>
+          </div>
 
-            <div className='flex flex-col gap-2 border-t border-gray-100 pt-4 md:flex-row md:items-center md:justify-between'>
-              <p className='text-sm text-gray-600'>
-                Stay present with the breath. When you are ready to wrap up, log
-                a reflection to save this session.
-              </p>
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleTogglePause}
-                  disabled={!isActive || isTogglingPause}
-                >
-                  {isPaused
-                    ? isTogglingPause
-                      ? 'Resuming…'
-                      : 'Resume'
-                    : isTogglingPause
-                      ? 'Pausing…'
-                      : 'Pause'}
-                </Button>
-                <Button
-                  type='button'
-                  variant='secondary'
-                  onClick={handleEndSession}
-                  disabled={!isActive || isEnding}
-                >
-                  {isEnding ? 'Ending…' : 'End Session'}
-                </Button>
-                <Button
-                  type='button'
-                  onClick={handleReflectionToggle}
-                  disabled={status === 'abandoned'}
-                >
-                  {showReflectionForm
-                    ? 'Hide Reflection'
-                    : reflectionButtonLabel}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className='p-6 text-center text-gray-600'>
-            <p>
-              This session is ready, but a technique was not provided. Head back
-              to{' '}
-              <a href='/meditate' className='text-blue-600 hover:underline'>
-                the meditation lobby
-              </a>{' '}
-              to choose one.
+          <div className='space-y-2'>
+            <h3 className='text-xs font-semibold uppercase tracking-[0.35em] text-white/80'>
+              Guidance cues
+            </h3>
+            <ul className='list-disc space-y-1 pl-5 text-sm text-slate-100/80'>
+              {technique.cues.map(cue => (
+                <li key={cue}>{cue}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className='flex flex-col gap-2 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between'>
+            <p className='text-sm text-slate-100/70'>
+              Stay present with the breath. When you are ready to wrap up, log a
+              reflection to save this session.
             </p>
-          </Card>
-        )}
+            <div className='flex flex-wrap gap-2'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={handleTogglePause}
+                disabled={!isActive || isTogglingPause}
+              >
+                {isPaused
+                  ? isTogglingPause
+                    ? 'Resuming…'
+                    : 'Resume'
+                  : isTogglingPause
+                    ? 'Pausing…'
+                    : 'Pause'}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={handleEndSession}
+                disabled={!isActive || isEnding}
+              >
+                {isEnding ? 'Ending…' : 'End Session'}
+              </Button>
+              <Button
+                type='button'
+                onClick={handleReflectionToggle}
+                disabled={status === 'abandoned'}
+              >
+                {showReflectionForm ? 'Hide Reflection' : reflectionButtonLabel}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className='p-6 text-center text-slate-100/80'>
+          <p>
+            This session is ready, but a technique was not provided. Head back
+            to{' '}
+            <a
+              href='/meditate'
+              className='text-blue-200 transition hover:text-blue-100 underline-offset-2 hover:underline'
+            >
+              the meditation lobby
+            </a>{' '}
+            to choose one.
+          </p>
+        </Card>
+      )}
 
-        {showReflectionForm && (
-          <Card className='p-6 space-y-4'>
-            <form onSubmit={handleReflectionSubmit} className='space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  How do you feel now?
-                </label>
-                <select
-                  value={reflectionMood}
-                  onChange={event => setReflectionMood(event.target.value)}
-                  className='block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
-                >
-                  {reflectionMoodOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+      {showReflectionForm && (
+        <Card className='space-y-4 p-6'>
+          <form onSubmit={handleReflectionSubmit} className='space-y-4'>
+            <div>
+              <label className='mb-2 block text-sm font-medium text-slate-100/85'>
+                How do you feel now?
+              </label>
+              <select
+                value={reflectionMood}
+                onChange={event => setReflectionMood(event.target.value)}
+                className='block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-inner shadow-blue-500/5 focus:border-sky-400/60 focus:outline-none focus:ring-2 focus:ring-sky-300/30'
+              >
+                {reflectionMoodOptions.map(option => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    className='bg-slate-900 text-slate-100'
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className='mb-2 block text-sm font-medium text-slate-100/85'>
+                How clear is your mind?
+              </label>
+              <select
+                value={clarityScore}
+                onChange={event => setClarityScore(Number(event.target.value))}
+                className='block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-inner shadow-sky-500/5 focus:border-sky-400/60 focus:outline-none focus:ring-2 focus:ring-sky-300/30'
+              >
+                {Array.from({ length: 5 }, (_, index) => index + 1).map(
+                  value => (
+                    <option
+                      key={value}
+                      value={value}
+                      className='bg-slate-900 text-slate-100'
+                    >
+                      {value} —{' '}
+                      {value === 1
+                        ? 'Cloudy'
+                        : value === 5
+                          ? 'Crystal clear'
+                          : 'Finding balance'}
                     </option>
-                  ))}
-                </select>
-              </div>
+                  )
+                )}
+              </select>
+            </div>
 
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  How clear is your mind?
-                </label>
-                <select
-                  value={clarityScore}
-                  onChange={event =>
-                    setClarityScore(Number(event.target.value))
-                  }
-                  className='block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
-                >
-                  {Array.from({ length: 5 }, (_, index) => index + 1).map(
-                    value => (
-                      <option key={value} value={value}>
-                        {value} —{' '}
-                        {value === 1
-                          ? 'Cloudy'
-                          : value === 5
-                            ? 'Crystal clear'
-                            : 'Finding balance'}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
+            <div>
+              <label className='mb-2 block text-sm font-medium text-slate-100/85'>
+                Reflection notes
+              </label>
+              <textarea
+                value={reflectionNotes}
+                onChange={event => setReflectionNotes(event.target.value)}
+                rows={4}
+                className='block w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-inner shadow-slate-500/10 focus:border-sky-400/60 focus:outline-none focus:ring-2 focus:ring-sky-300/30'
+                placeholder='Capture any insights, shifts, or reminders you want to keep.'
+                required
+              />
+            </div>
 
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Reflection notes
-                </label>
-                <textarea
-                  value={reflectionNotes}
-                  onChange={event => setReflectionNotes(event.target.value)}
-                  rows={4}
-                  className='block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200'
-                  placeholder='Capture any insights, shifts, or reminders you want to keep.'
-                  required
-                />
-              </div>
-
-              <div className='flex justify-end gap-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => setShowReflectionForm(false)}
-                  disabled={isSavingReflection}
-                >
-                  Cancel
-                </Button>
-                <Button type='submit' disabled={isSavingReflection}>
-                  {isSavingReflection ? 'Saving…' : 'Save Reflection'}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        )}
-      </div>
+            <div className='flex justify-end gap-2'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setShowReflectionForm(false)}
+                disabled={isSavingReflection}
+              >
+                Cancel
+              </Button>
+              <Button type='submit' disabled={isSavingReflection}>
+                {isSavingReflection ? 'Saving…' : 'Save Reflection'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }

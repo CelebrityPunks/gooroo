@@ -16,13 +16,15 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClasses =
-    'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+    'font-medium rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60 backdrop-blur-sm';
 
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
+    primary:
+      'bg-sky-500/90 text-white hover:bg-sky-400/90 focus:ring-sky-300/60 focus-visible:ring-sky-200/50',
+    secondary:
+      'bg-white/15 text-white hover:bg-white/25 focus:ring-slate-200/40 focus-visible:ring-slate-100/30',
     outline:
-      'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-blue-500',
+      'border border-white/35 text-white hover:bg-white/15 focus:ring-slate-200/35 focus-visible:ring-slate-100/25',
   };
 
   const sizeClasses = {
