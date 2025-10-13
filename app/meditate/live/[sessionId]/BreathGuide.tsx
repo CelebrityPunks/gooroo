@@ -144,11 +144,15 @@ export default function BreathGuide({
       speakPhase(nextPhase, duration);
 
       const phaseIndex = phaseOrder.indexOf(nextPhase);
-      const isLastPhase = phaseIndex === phaseOrder.length - 1;
-      const nextPhaseName = isLastPhase
-        ? phaseOrder[0]
-        : phaseOrder[phaseIndex + 1];
+      const safePhaseIndex = phaseIndex >= 0 ? phaseIndex : 0;
+      const isLastPhase = safePhaseIndex === phaseOrder.length - 1;
+      const nextPhaseIndex = isLastPhase ? 0 : safePhaseIndex + 1;
+      const nextPhaseName = phaseOrder[nextPhaseIndex];
       const nextCycleCount = isLastPhase ? nextCycle + 1 : nextCycle;
+
+      if (!nextPhaseName) {
+        return;
+      }
       const waitDuration = Math.max(duration, 0) * 1000;
 
       if (isLastPhase && pattern.cycles && nextCycleCount > pattern.cycles) {
