@@ -117,6 +117,8 @@ export default function LiveSessionView({
   const [status, setStatus] = useState<SessionStatus>(initialStatus);
   const [hasGuidanceStarted, setHasGuidanceStarted] = useState(() =>
     Boolean(startedAt)
+  const [hasGuidanceStarted, setHasGuidanceStarted] = useState(
+    initialStatus !== 'live'
   );
   const [isPaused, setIsPaused] = useState(false);
   const [isTogglingPause, setIsTogglingPause] = useState(false);
@@ -151,6 +153,15 @@ export default function LiveSessionView({
   const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(() =>
     startedAt ? new Date(startedAt) : null
   );
+  const introPlayedRef = useRef(initialStatus !== 'live');
+
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(() => {
+    if (initialStatus !== 'live' && startedAt) {
+      return new Date(startedAt);
+    }
+
+    return null;
+  });
 
   const startedAtLabel = useMemo(() => {
     if (!timerStartedAt) {
@@ -260,6 +271,7 @@ export default function LiveSessionView({
     isSessionLive,
     isVoiceGuideEnabled,
   ]);
+  }, [hasGuidanceStarted, isPaused, isSessionLive]);
 
   const ambientParticles = useMemo(
     () => [
@@ -342,6 +354,7 @@ export default function LiveSessionView({
 
   const speakIntro = useCallback(async () => {
     if (!technique || introPlayedRef.current || !isVoiceGuideEnabled) {
+    if (!technique || introPlayedRef.current) {
       return;
     }
 
@@ -357,6 +370,10 @@ export default function LiveSessionView({
     setIntroNeedsUserInteraction(false);
     setIsIntroPlaying(true);
 
+      return;
+    }
+
+    setIsIntroPlaying(true);
     const controller = new AbortController();
     introAbortControllerRef.current = controller;
 
@@ -387,6 +404,7 @@ export default function LiveSessionView({
       introAudioUrlRef.current = url;
 
       const completeIntro = () => {
+      audio.onended = () => {
         if (introAudioRef.current === audio) {
           introAudioRef.current = null;
         }
@@ -448,12 +466,33 @@ export default function LiveSessionView({
       setIntroNeedsUserInteraction(false);
       setHasIntroCompleted(true);
       introPlayedRef.current = true;
+        introPlayedRef.current = true;
+        setIsIntroPlaying(false);
+      };
+
+      audio.onerror = () => {
+        if (introAudioUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          introAudioUrlRef.current = null;
+        }
+        setIsIntroPlaying(false);
+      };
+
+      await audio.play();
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        // eslint-disable-next-line no-console
+        console.error('Voice intro playback error', error);
+        setIsIntroPlaying(false);
+        introPlayedRef.current = true;
+      }
     } finally {
       if (introAbortControllerRef.current === controller) {
         introAbortControllerRef.current = null;
       }
     }
   }, [isVoiceGuideEnabled, technique]);
+  }, [technique]);
 
   const handleTogglePause = async () => {
     if (!isGuidanceLive) {
@@ -548,6 +587,8 @@ export default function LiveSessionView({
     cancelIntro();
     introPlayedRef.current = true;
     setHasIntroCompleted(true);
+    cancelIntro();
+    introPlayedRef.current = true;
     setHasGuidanceStarted(true);
     setIsPaused(false);
     setTimerStartedAt(new Date());
@@ -574,6 +615,7 @@ export default function LiveSessionView({
     sessionId,
     technique,
   ]);
+  }, [cancelIntro, hasGuidanceStarted, isSessionLive, sessionId, technique]);
 
   const handleReflectionSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -796,6 +838,14 @@ export default function LiveSessionView({
     setHasIntroCompleted(false);
 
     if (!isSessionLive || !technique) {
+    if (!isVoiceGuideEnabled) {
+      cancelIntro();
+      introPlayedRef.current = false;
+    }
+  }, [cancelIntro, isVoiceGuideEnabled]);
+
+  useEffect(() => {
+    if (!isSessionLive || hasGuidanceStarted || !isVoiceGuideEnabled) {
       return;
     }
 
@@ -808,6 +858,7 @@ export default function LiveSessionView({
     speakIntro,
     technique,
   ]);
+  }, [hasGuidanceStarted, isSessionLive, isVoiceGuideEnabled, speakIntro]);
 
   useEffect(() => {
     return () => {
@@ -927,6 +978,20 @@ export default function LiveSessionView({
                         </span>
                       </div>
                     )}
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <Button
+                      type='button'
+                      onClick={handleStartGuidance}
+                      className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
+                      disabled={isIntroPlaying}
+                    >
+                      {isIntroPlaying ? 'Preparing…' : 'Start Session'}
+                    </Button>
+                    <span className='text-xs text-blue-100/70'>
+                      {isIntroPlaying
+                        ? 'Your guide is introducing the practice—start when you are ready.'
+                        : 'Press start to begin the timed guidance and breathing cues.'}
+                    </span>
                   </div>
                 )}
                 <div className='flex flex-wrap items-center gap-3'>
@@ -979,6 +1044,7 @@ export default function LiveSessionView({
           techniqueDescription={technique.description}
           techniqueIntention={technique.intention}
           isActive={isGuidanceLive}
+          isActive={isActive}
           isPaused={isPaused}
           isVoiceGuideEnabled={isVoiceGuideEnabled}
         />
