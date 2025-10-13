@@ -16,6 +16,7 @@ interface BreathGuideProps {
   techniqueName: string;
   isActive: boolean;
   isPaused: boolean;
+  isVoiceGuideEnabled: boolean;
 }
 
 function formatDuration(seconds: number) {
@@ -54,6 +55,7 @@ export default function BreathGuide({
   techniqueName,
   isActive,
   isPaused,
+  isVoiceGuideEnabled,
 }: BreathGuideProps) {
   const [phase, setPhase] = useState<BreathPhase>('idle');
   const [cycle, setCycle] = useState(1);
@@ -101,22 +103,30 @@ export default function BreathGuide({
     window.speechSynthesis.cancel();
   }, []);
 
-  const speakPhase = useCallback((nextPhase: BreathPhase, duration: number) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return;
-    }
+  const speakPhase = useCallback(
+    (nextPhase: BreathPhase, duration: number) => {
+      if (
+        typeof window === 'undefined' ||
+        !('speechSynthesis' in window) ||
+        !isVoiceGuideEnabled
+      ) {
+        cancelSpeech();
+        return;
+      }
 
-    const text = createSpeechText(nextPhase, duration);
-    if (!text) {
-      return;
-    }
+      const text = createSpeechText(nextPhase, duration);
+      if (!text) {
+        return;
+      }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = SPEECH_RATE;
-    utterance.pitch = SPEECH_PITCH;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  }, []);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = SPEECH_RATE;
+      utterance.pitch = SPEECH_PITCH;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    },
+    [cancelSpeech, isVoiceGuideEnabled]
+  );
 
   const clearTimers = useCallback(() => {
     timeoutsRef.current.forEach(timeoutId => {
@@ -181,6 +191,12 @@ export default function BreathGuide({
     },
     [durations, phaseOrder, pattern.cycles, speakPhase]
   );
+
+  useEffect(() => {
+    if (!isVoiceGuideEnabled) {
+      cancelSpeech();
+    }
+  }, [cancelSpeech, isVoiceGuideEnabled]);
 
   useEffect(() => {
     if (!isActive) {
