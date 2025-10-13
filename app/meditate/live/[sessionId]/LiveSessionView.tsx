@@ -84,6 +84,7 @@ export default function LiveSessionView({
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [isSoundscapeEnabled, setIsSoundscapeEnabled] = useState(false);
   const [isSoundscapeLoading, setIsSoundscapeLoading] = useState(false);
+  const [isVoiceGuideEnabled, setIsVoiceGuideEnabled] = useState(true);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -477,6 +478,16 @@ export default function LiveSessionView({
     };
   }, [stopSoundscape]);
 
+  const handleVoiceGuideToggle = useCallback(() => {
+    setIsVoiceGuideEnabled(previous => !previous);
+    setFeedback({
+      type: 'info',
+      message: !isVoiceGuideEnabled
+        ? 'Voice guidance resumed. A calming narration will accompany each breath.'
+        : 'Voice guidance muted. Continue following the visual cue at your own pace.',
+    });
+  }, [isVoiceGuideEnabled]);
+
   return (
     <div className='mx-auto flex w-full max-w-5xl flex-col gap-6'>
       <header className='space-y-3 text-center'>
@@ -555,25 +566,44 @@ export default function LiveSessionView({
               <p className='max-w-md text-sm text-blue-100/60'>
                 {timerStatusDetail}
               </p>
-              <div className='mt-4 flex flex-wrap items-center gap-3'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleSoundscapeToggle}
-                  disabled={isSoundscapeLoading}
-                  className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
-                >
-                  {isSoundscapeEnabled
-                    ? 'Soundscape On'
-                    : isSoundscapeLoading
-                      ? 'Starting…'
-                      : 'Play Soundscape'}
-                </Button>
-                <span className='text-xs text-blue-100/70'>
-                  {isSoundscapeEnabled
-                    ? 'Soft harmonic tones are playing to anchor your focus.'
-                    : 'Activate a gentle harmonic tone to accompany your breath.'}
-                </span>
+              <div className='mt-4 space-y-3 text-left'>
+                <div className='flex flex-wrap items-center gap-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleSoundscapeToggle}
+                    disabled={isSoundscapeLoading}
+                    className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
+                  >
+                    {isSoundscapeEnabled
+                      ? 'Soundscape On'
+                      : isSoundscapeLoading
+                        ? 'Starting…'
+                        : 'Play Soundscape'}
+                  </Button>
+                  <span className='text-xs text-blue-100/70'>
+                    {isSoundscapeEnabled
+                      ? 'Soft harmonic tones are playing to anchor your focus.'
+                      : 'Activate a gentle harmonic tone to accompany your breath.'}
+                  </span>
+                </div>
+                <div className='flex flex-wrap items-center gap-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleVoiceGuideToggle}
+                    className={`border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30 ${
+                      isVoiceGuideEnabled ? '' : 'opacity-80'
+                    }`}
+                  >
+                    {isVoiceGuideEnabled ? 'Voice Guide On' : 'Voice Guide Off'}
+                  </Button>
+                  <span className='text-xs text-blue-100/70'>
+                    {isVoiceGuideEnabled
+                      ? 'A calm narration will guide each inhale, hold, and exhale.'
+                      : 'Voice guidance muted—follow the visual cues at your own pace.'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -586,6 +616,7 @@ export default function LiveSessionView({
           techniqueName={technique.name}
           isActive={isActive}
           isPaused={isPaused}
+          isVoiceGuideEnabled={isVoiceGuideEnabled}
         />
       )}
 
