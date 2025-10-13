@@ -5,7 +5,8 @@ import { AuthProvider } from '../components/auth/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'AI Guru Meditation',
-  description: 'A voice-first meditation app where users speak to an AI Guru who guides meditation in real time',
+  description:
+    'A voice-first meditation app where users speak to an AI Guru who guides meditation in real time',
 };
 
 export default function RootLayout({
@@ -14,11 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang='en'>
+      <body className='app-body font-sans antialiased'>
         <AuthProvider>
-          <main className="min-h-screen">
-            {children}
+          <main className='app-shell'>
+            <div className='app-shell__content'>{children}</div>
           </main>
         </AuthProvider>
       </body>
