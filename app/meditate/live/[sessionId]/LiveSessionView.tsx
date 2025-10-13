@@ -64,7 +64,6 @@ function statusLabel(status: SessionStatus) {
 export default function LiveSessionView({
   sessionId,
   technique,
-  decidedBy,
   goal,
   startedAt,
   initialStatus,
@@ -240,7 +239,6 @@ export default function LiveSessionView({
     []
   );
 
-  const decidedByLabel = decidedBy === 'user' ? 'You' : 'Guru';
   const reflectionButtonLabel =
     status === 'completed' ? 'Update Reflection' : 'Log Reflection';
 
@@ -481,35 +479,18 @@ export default function LiveSessionView({
     <div className='mx-auto flex w-full max-w-5xl flex-col gap-6'>
       <header className='space-y-3 text-center'>
         <h1 className='text-3xl font-semibold text-white md:text-4xl'>
-          Live Session
+          {technique?.name ?? 'Meditation Session'}
         </h1>
-        <p className='text-sm text-slate-100/70'>
-          Session ID{' '}
-          <span className='ml-1 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 font-mono text-xs uppercase tracking-[0.22em] text-blue-100/90 shadow-inner'>
-            {sessionId}
-          </span>
-        </p>
         {loadError && (
           <p className='text-xs font-semibold text-rose-300'>{loadError}</p>
         )}
-        <p className='text-sm text-slate-100/60'>
-          Status: {statusLabel(status)}
-          {isPaused ? ' · Paused' : ''}
-        </p>
-        {technique && (
-          <p className='text-sm text-slate-100/70'>
-            {decidedByLabel} selected{' '}
-            <span className='font-semibold text-white'>{technique.name}</span>{' '}
-            to guide this practice.
-          </p>
-        )}
         {goal && (
-          <p className='text-xs uppercase tracking-[0.35em] text-blue-100/70'>
-            Goal for this session: {goal}
+          <p className='text-sm uppercase tracking-[0.35em] text-blue-100/70'>
+            Goal: {goal}
           </p>
         )}
         {startedAtLabel && (
-          <p className='text-xs text-blue-100/60'>Started {startedAtLabel}</p>
+          <p className='text-sm text-blue-100/60'>Started {startedAtLabel}</p>
         )}
       </header>
 
