@@ -4,9 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../../../../components/ui';
 import type { Technique } from '../../../../lib/techniques';
 
-const SPEECH_RATE = 0.92;
-const SPEECH_PITCH = 1.05;
-
 type BreathPhase = 'idle' | 'inhale' | 'hold' | 'exhale' | 'complete';
 
 type BreathPattern = Technique['pattern'];
@@ -66,6 +63,9 @@ export default function BreathGuide({
   const timeoutsRef = useRef<number[]>([]);
   const isActiveRef = useRef(isActive);
   const isPausedRef = useRef(isPaused);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activeAudioUrlRef = useRef<string | null>(null);
+  const speechAbortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     isActiveRef.current = isActive;
@@ -96,21 +96,26 @@ export default function BreathGuide({
   );
 
   const cancelSpeech = useCallback(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return;
+    speechAbortControllerRef.current?.abort();
+    speechAbortControllerRef.current = null;
+
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current.currentTime = 0;
+      activeAudioRef.current = null;
     }
 
-    window.speechSynthesis.cancel();
+    if (activeAudioUrlRef.current) {
+      URL.revokeObjectURL(activeAudioUrlRef.current);
+      activeAudioUrlRef.current = null;
+    }
   }, []);
 
   const speakPhase = useCallback(
     (nextPhase: BreathPhase, duration: number) => {
-      if (
-        typeof window === 'undefined' ||
-        !('speechSynthesis' in window) ||
-        !isVoiceGuideEnabled
-      ) {
-        cancelSpeech();
+      cancelSpeech();
+
+      if (!isVoiceGuideEnabled) {
         return;
       }
 
@@ -119,11 +124,67 @@ export default function BreathGuide({
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = SPEECH_RATE;
-      utterance.pitch = SPEECH_PITCH;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      const controller = new AbortController();
+      speechAbortControllerRef.current = controller;
+
+      void fetch('/api/voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error('Failed to retrieve guided audio');
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+
+          activeAudioRef.current = audio;
+          activeAudioUrlRef.current = url;
+
+          audio.onended = () => {
+            if (activeAudioRef.current === audio) {
+              activeAudioRef.current = null;
+            }
+            if (activeAudioUrlRef.current === url) {
+              URL.revokeObjectURL(url);
+              activeAudioUrlRef.current = null;
+            }
+          };
+
+          audio.onerror = () => {
+            if (activeAudioUrlRef.current === url) {
+              URL.revokeObjectURL(url);
+              activeAudioUrlRef.current = null;
+            }
+          };
+
+          await audio.play();
+        })
+        .catch(error => {
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          // eslint-disable-next-line no-console
+          console.error('Voice guidance playback error', error);
+        })
+        .finally(() => {
+          if (speechAbortControllerRef.current === controller) {
+            speechAbortControllerRef.current = null;
+          }
+        });
     },
     [cancelSpeech, isVoiceGuideEnabled]
   );
@@ -197,6 +258,13 @@ export default function BreathGuide({
       cancelSpeech();
     }
   }, [cancelSpeech, isVoiceGuideEnabled]);
+
+  useEffect(
+    () => () => {
+      cancelSpeech();
+    },
+    [cancelSpeech]
+  );
 
   useEffect(() => {
     if (!isActive) {
