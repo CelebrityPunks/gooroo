@@ -101,6 +101,8 @@ function createSpeechText(
     }
   }
 
+  }
+
   if (phase in simpleByPhase) {
     return simpleByPhase[phase as keyof typeof simpleByPhase];
   }
@@ -178,6 +180,12 @@ export default function BreathGuide({
       activeAudioRef.current.pause();
       activeAudioRef.current.currentTime = 0;
       activeAudioRef.current = null;
+    }
+
+    if (activeAudioUrlRef.current) {
+      URL.revokeObjectURL(activeAudioUrlRef.current);
+      activeAudioUrlRef.current = null;
+    }
     }
 
     if (activeAudioUrlRef.current) {

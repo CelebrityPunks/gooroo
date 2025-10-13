@@ -115,6 +115,8 @@ export default function LiveSessionView({
 }: LiveSessionViewProps) {
   const router = useRouter();
   const [status, setStatus] = useState<SessionStatus>(initialStatus);
+  const [hasGuidanceStarted, setHasGuidanceStarted] = useState(() =>
+    Boolean(startedAt)
   const [hasGuidanceStarted, setHasGuidanceStarted] = useState(
     initialStatus !== 'live'
   );
@@ -132,6 +134,11 @@ export default function LiveSessionView({
   const [isSoundscapeLoading, setIsSoundscapeLoading] = useState(false);
   const [isVoiceGuideEnabled, setIsVoiceGuideEnabled] = useState(true);
   const [isIntroPlaying, setIsIntroPlaying] = useState(false);
+  const [hasIntroCompleted, setHasIntroCompleted] = useState(() =>
+    Boolean(startedAt)
+  );
+  const [introNeedsUserInteraction, setIntroNeedsUserInteraction] =
+    useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -139,6 +146,13 @@ export default function LiveSessionView({
   const introAbortControllerRef = useRef<AbortController | null>(null);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introAudioUrlRef = useRef<string | null>(null);
+  const introPlayedRef = useRef(Boolean(startedAt));
+  const manualIntroPlayRef = useRef<(() => Promise<void>) | null>(null);
+  const initialTimerHydratedRef = useRef(Boolean(startedAt));
+
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(() =>
+    startedAt ? new Date(startedAt) : null
+  );
   const introPlayedRef = useRef(initialStatus !== 'live');
 
   const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(() => {
@@ -237,12 +251,26 @@ export default function LiveSessionView({
     }
 
     if (!hasGuidanceStarted) {
+      if (isVoiceGuideEnabled && !hasIntroCompleted) {
+        return introNeedsUserInteraction
+          ? 'Tap "Play Intro" so your browser can allow the guide\'s voice, then press start when you are ready.'
+          : "Listen to the guide's introduction. The start button will unlock once it finishes.";
+      }
+
       return 'Settle in. Press start when you feel ready to begin the guided breath.';
     }
 
     return isPaused
       ? 'Take a breath. Your timer will resume when you do.'
       : 'Stay with the flow of your breath while the timer gently tracks your practice.';
+  }, [
+    hasGuidanceStarted,
+    hasIntroCompleted,
+    introNeedsUserInteraction,
+    isPaused,
+    isSessionLive,
+    isVoiceGuideEnabled,
+  ]);
   }, [hasGuidanceStarted, isPaused, isSessionLive]);
 
   const ambientParticles = useMemo(
@@ -319,10 +347,13 @@ export default function LiveSessionView({
       introAudioUrlRef.current = null;
     }
 
+    manualIntroPlayRef.current = null;
+    setIntroNeedsUserInteraction(false);
     setIsIntroPlaying(false);
   }, []);
 
   const speakIntro = useCallback(async () => {
+    if (!technique || introPlayedRef.current || !isVoiceGuideEnabled) {
     if (!technique || introPlayedRef.current) {
       return;
     }
@@ -331,6 +362,14 @@ export default function LiveSessionView({
 
     if (!text) {
       introPlayedRef.current = true;
+      setHasIntroCompleted(true);
+      return;
+    }
+
+    setHasIntroCompleted(false);
+    setIntroNeedsUserInteraction(false);
+    setIsIntroPlaying(true);
+
       return;
     }
 
@@ -364,6 +403,7 @@ export default function LiveSessionView({
       introAudioRef.current = audio;
       introAudioUrlRef.current = url;
 
+      const completeIntro = () => {
       audio.onended = () => {
         if (introAudioRef.current === audio) {
           introAudioRef.current = null;
@@ -372,6 +412,60 @@ export default function LiveSessionView({
           URL.revokeObjectURL(url);
           introAudioUrlRef.current = null;
         }
+        manualIntroPlayRef.current = null;
+        introPlayedRef.current = true;
+        setIsIntroPlaying(false);
+        setIntroNeedsUserInteraction(false);
+        setHasIntroCompleted(true);
+      };
+
+      audio.onended = completeIntro;
+      audio.onerror = completeIntro;
+
+      try {
+        await audio.play();
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          (error.name === 'NotAllowedError' || error.name === 'AbortError')
+        ) {
+          setIsIntroPlaying(false);
+          setIntroNeedsUserInteraction(true);
+          manualIntroPlayRef.current = async () => {
+            try {
+              setIntroNeedsUserInteraction(false);
+              setIsIntroPlaying(true);
+              await audio.play();
+            } catch (retryError) {
+              if (
+                !(retryError instanceof DOMException) ||
+                retryError.name !== 'AbortError'
+              ) {
+                // eslint-disable-next-line no-console
+                console.error('Voice intro playback error', retryError);
+              }
+              completeIntro();
+            }
+          };
+          return;
+        }
+
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+          // eslint-disable-next-line no-console
+          console.error('Voice intro playback error', error);
+        }
+
+        completeIntro();
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+        // eslint-disable-next-line no-console
+        console.error('Voice intro playback error', error);
+      }
+      setIsIntroPlaying(false);
+      setIntroNeedsUserInteraction(false);
+      setHasIntroCompleted(true);
+      introPlayedRef.current = true;
         introPlayedRef.current = true;
         setIsIntroPlaying(false);
       };
@@ -397,6 +491,7 @@ export default function LiveSessionView({
         introAbortControllerRef.current = null;
       }
     }
+  }, [isVoiceGuideEnabled, technique]);
   }, [technique]);
 
   const handleTogglePause = async () => {
@@ -479,6 +574,19 @@ export default function LiveSessionView({
       return;
     }
 
+    if (isVoiceGuideEnabled && !hasIntroCompleted) {
+      if (introNeedsUserInteraction) {
+        const retry = manualIntroPlayRef.current;
+        if (retry) {
+          void retry();
+        }
+      }
+      return;
+    }
+
+    cancelIntro();
+    introPlayedRef.current = true;
+    setHasIntroCompleted(true);
     cancelIntro();
     introPlayedRef.current = true;
     setHasGuidanceStarted(true);
@@ -497,6 +605,16 @@ export default function LiveSessionView({
       // eslint-disable-next-line no-console
       console.error('Failed to log start event', error);
     }
+  }, [
+    cancelIntro,
+    hasGuidanceStarted,
+    hasIntroCompleted,
+    introNeedsUserInteraction,
+    isSessionLive,
+    isVoiceGuideEnabled,
+    sessionId,
+    technique,
+  ]);
   }, [cancelIntro, hasGuidanceStarted, isSessionLive, sessionId, technique]);
 
   const handleReflectionSubmit = async (
@@ -671,6 +789,10 @@ export default function LiveSessionView({
   const handleVoiceGuideToggle = useCallback(() => {
     if (isVoiceGuideEnabled) {
       cancelIntro();
+      introPlayedRef.current = false;
+      manualIntroPlayRef.current = null;
+      setIntroNeedsUserInteraction(false);
+      setHasIntroCompleted(true);
     }
 
     setIsVoiceGuideEnabled(previous => !previous);
@@ -683,6 +805,39 @@ export default function LiveSessionView({
   }, [cancelIntro, isVoiceGuideEnabled]);
 
   useEffect(() => {
+    if (!technique) {
+      return;
+    }
+
+    if (initialTimerHydratedRef.current) {
+      initialTimerHydratedRef.current = false;
+      return;
+    }
+
+    setHasGuidanceStarted(false);
+    setIsPaused(false);
+    setTimerStartedAt(null);
+  }, [technique]);
+
+  useEffect(() => {
+    if (hasGuidanceStarted) {
+      return;
+    }
+
+    cancelIntro();
+    manualIntroPlayRef.current = null;
+    setIntroNeedsUserInteraction(false);
+
+    if (!isVoiceGuideEnabled) {
+      introPlayedRef.current = false;
+      setHasIntroCompleted(true);
+      return;
+    }
+
+    introPlayedRef.current = false;
+    setHasIntroCompleted(false);
+
+    if (!isSessionLive || !technique) {
     if (!isVoiceGuideEnabled) {
       cancelIntro();
       introPlayedRef.current = false;
@@ -695,6 +850,14 @@ export default function LiveSessionView({
     }
 
     void speakIntro();
+  }, [
+    cancelIntro,
+    hasGuidanceStarted,
+    isSessionLive,
+    isVoiceGuideEnabled,
+    speakIntro,
+    technique,
+  ]);
   }, [hasGuidanceStarted, isSessionLive, isVoiceGuideEnabled, speakIntro]);
 
   useEffect(() => {
@@ -766,6 +929,55 @@ export default function LiveSessionView({
               </p>
               <div className='mt-4 space-y-3 text-left'>
                 {!hasGuidanceStarted && isSessionLive && (
+                  <div className='flex flex-col gap-3'>
+                    <div className='flex flex-wrap items-center gap-3'>
+                      <Button
+                        type='button'
+                        onClick={handleStartGuidance}
+                        className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
+                        disabled={
+                          isIntroPlaying ||
+                          (isVoiceGuideEnabled && !hasIntroCompleted)
+                        }
+                      >
+                        {isIntroPlaying
+                          ? 'Guide Speaking…'
+                          : isVoiceGuideEnabled && !hasIntroCompleted
+                            ? 'Waiting on Intro'
+                            : 'Start Session'}
+                      </Button>
+                      <span className='text-xs text-blue-100/70'>
+                        {isVoiceGuideEnabled
+                          ? isIntroPlaying
+                            ? 'Your guide is introducing the practice—start when you feel prepared.'
+                            : hasIntroCompleted
+                              ? 'Press start to begin the timed guidance and breathing cues.'
+                              : introNeedsUserInteraction
+                                ? 'Tap play below to allow the guide before we begin.'
+                                : 'We will begin once the introduction concludes.'
+                          : 'Press start to begin the timed guidance and breathing cues.'}
+                      </span>
+                    </div>
+                    {introNeedsUserInteraction && (
+                      <div className='flex flex-wrap items-center gap-3'>
+                        <Button
+                          type='button'
+                          onClick={() => {
+                            const retry = manualIntroPlayRef.current;
+                            if (retry) {
+                              void retry();
+                            }
+                          }}
+                          className='bg-white/90 text-slate-900 hover:bg-white focus:ring-white/60'
+                        >
+                          Play Intro
+                        </Button>
+                        <span className='text-xs text-blue-100/70'>
+                          Tap play to let your browser enable audio for the
+                          guide.
+                        </span>
+                      </div>
+                    )}
                   <div className='flex flex-wrap items-center gap-3'>
                     <Button
                       type='button'
