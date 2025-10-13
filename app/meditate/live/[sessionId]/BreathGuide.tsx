@@ -11,6 +11,8 @@ type BreathPattern = Technique['pattern'];
 interface BreathGuideProps {
   pattern: BreathPattern;
   techniqueName: string;
+  techniqueDescription: string;
+  techniqueIntention: string;
   isActive: boolean;
   isPaused: boolean;
   isVoiceGuideEnabled: boolean;
@@ -24,32 +26,93 @@ function formatDuration(seconds: number) {
   return seconds === 1 ? '1 second' : `${seconds} seconds`;
 }
 
-function createSpeechText(phase: BreathPhase, duration: number) {
-  const roundedDuration = Math.round(duration);
+interface SpeechContext {
+  phase: BreathPhase;
+  duration: number;
+  cycle: number;
+  introDelivered: boolean;
+  techniqueName: string;
+  techniqueDescription: string;
+  techniqueIntention: string;
+}
 
-  switch (phase) {
-    case 'inhale':
-      return roundedDuration > 0
-        ? `Inhale for ${formatDuration(roundedDuration)}.`
-        : 'Inhale.';
-    case 'hold':
-      return roundedDuration > 0
-        ? `Hold gently for ${formatDuration(roundedDuration)}.`
-        : 'Hold the breath softly.';
-    case 'exhale':
-      return roundedDuration > 0
-        ? `Exhale for ${formatDuration(roundedDuration)}.`
-        : 'Exhale.';
-    case 'complete':
-      return 'Guided breathing complete. Continue at your own pace.';
-    default:
-      return '';
+function createSpeechText(
+  {
+    phase,
+    duration,
+    cycle,
+    introDelivered,
+    techniqueDescription,
+    techniqueIntention,
+    techniqueName,
+  }: SpeechContext,
+  hasHold: boolean
+) {
+  if (phase === 'complete') {
+    return 'Guided breathing complete. Continue at your own pace.';
   }
+
+  const roundedDuration = Math.max(0, Math.round(duration));
+  const durationLabel =
+    roundedDuration > 0 ? formatDuration(roundedDuration) : '';
+
+  const simpleByPhase: Record<
+    Exclude<BreathPhase, 'idle' | 'complete'>,
+    string
+  > = {
+    inhale: 'Inhale.',
+    hold: hasHold ? 'Rest.' : 'Hold softly.',
+    exhale: 'Exhale.',
+  };
+
+  const timedByPhase: Record<
+    Exclude<BreathPhase, 'idle' | 'complete'>,
+    string
+  > = {
+    inhale:
+      durationLabel && durationLabel.length > 0
+        ? `Inhale for ${durationLabel}.`
+        : simpleByPhase.inhale,
+    hold:
+      durationLabel && durationLabel.length > 0
+        ? `${hasHold ? 'Rest' : 'Hold'} for ${durationLabel}.`
+        : simpleByPhase.hold,
+    exhale:
+      durationLabel && durationLabel.length > 0
+        ? `Exhale for ${durationLabel}.`
+        : simpleByPhase.exhale,
+  };
+
+  if (cycle === 1) {
+    if (phase === 'inhale' && !introDelivered) {
+      const introSegments = [
+        `Welcome to ${techniqueName}.`,
+        techniqueDescription,
+        techniqueIntention,
+      ].filter(Boolean);
+
+      introSegments.push(timedByPhase.inhale);
+
+      return introSegments.join(' ');
+    }
+
+    if (phase in timedByPhase) {
+      return timedByPhase[phase as keyof typeof timedByPhase];
+    }
+  }
+
+  if (phase in simpleByPhase) {
+    return simpleByPhase[phase as keyof typeof simpleByPhase];
+  }
+
+  return '';
 }
 
 export default function BreathGuide({
   pattern,
   techniqueName,
+  techniqueDescription,
+  techniqueIntention,
   isActive,
   isPaused,
   isVoiceGuideEnabled,
@@ -66,6 +129,7 @@ export default function BreathGuide({
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioUrlRef = useRef<string | null>(null);
   const speechAbortControllerRef = useRef<AbortController | null>(null);
+  const introSpokenRef = useRef(false);
 
   useEffect(() => {
     isActiveRef.current = isActive;
@@ -112,16 +176,35 @@ export default function BreathGuide({
   }, []);
 
   const speakPhase = useCallback(
-    (nextPhase: BreathPhase, duration: number) => {
+    (nextPhase: BreathPhase, duration: number, nextCycle: number) => {
       cancelSpeech();
 
       if (!isVoiceGuideEnabled) {
         return;
       }
 
-      const text = createSpeechText(nextPhase, duration);
+      const text = createSpeechText(
+        {
+          phase: nextPhase,
+          duration,
+          cycle: nextCycle,
+          introDelivered: introSpokenRef.current,
+          techniqueDescription,
+          techniqueIntention,
+          techniqueName,
+        },
+        hasHold
+      );
       if (!text) {
         return;
+      }
+
+      if (
+        nextPhase === 'inhale' &&
+        nextCycle === 1 &&
+        !introSpokenRef.current
+      ) {
+        introSpokenRef.current = true;
       }
 
       const controller = new AbortController();
@@ -186,7 +269,14 @@ export default function BreathGuide({
           }
         });
     },
-    [cancelSpeech, isVoiceGuideEnabled]
+    [
+      cancelSpeech,
+      hasHold,
+      isVoiceGuideEnabled,
+      techniqueDescription,
+      techniqueIntention,
+      techniqueName,
+    ]
   );
 
   const clearTimers = useCallback(() => {
@@ -212,7 +302,7 @@ export default function BreathGuide({
       setPhaseDuration(duration);
       setPhaseStartedAt(Date.now());
       setPhaseProgress(0);
-      speakPhase(nextPhase, duration);
+      speakPhase(nextPhase, duration, nextCycle);
 
       const phaseIndex = phaseOrder.indexOf(nextPhase);
       const safePhaseIndex = phaseIndex >= 0 ? phaseIndex : 0;
@@ -235,7 +325,7 @@ export default function BreathGuide({
           setPhaseDuration(0);
           setPhaseStartedAt(null);
           setPhaseProgress(0);
-          speakPhase('complete', 0);
+          speakPhase('complete', 0, nextCycleCount);
         }, waitDuration);
         timeoutsRef.current.push(completionId);
         return;
@@ -270,6 +360,7 @@ export default function BreathGuide({
     if (!isActive) {
       clearTimers();
       cancelSpeech();
+      introSpokenRef.current = false;
       setPhase('idle');
       setCycle(1);
       setPhaseDuration(pattern.inhale);
@@ -281,11 +372,13 @@ export default function BreathGuide({
     if (isPaused) {
       clearTimers();
       cancelSpeech();
+      introSpokenRef.current = false;
       return;
     }
 
     clearTimers();
     cancelSpeech();
+    introSpokenRef.current = false;
     schedulePhase('inhale', 1);
 
     return () => {

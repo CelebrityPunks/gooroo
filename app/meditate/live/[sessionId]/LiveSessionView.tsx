@@ -595,6 +595,8 @@ export default function LiveSessionView({
         <BreathGuide
           pattern={technique.pattern}
           techniqueName={technique.name}
+          techniqueDescription={technique.description}
+          techniqueIntention={technique.intention}
           isActive={isActive}
           isPaused={isPaused}
           isVoiceGuideEnabled={isVoiceGuideEnabled}
