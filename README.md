@@ -17,12 +17,12 @@ A voice-first Next.js app where users speak to an AI Guru who selects and guides
 3. Set up environment variables (see `.env.example`)
    - Provide `ELEVENLABS_API_KEY` with your ElevenLabs secret key
    - Optionally set `ELEVENLABS_VOICE_ID` to choose a different ElevenLabs voice
-3. Copy `.env.example` to `.env` and fill in your own secrets
+4. Copy `.env.example` to `.env` and fill in your own secrets
    - `cp .env.example .env`
    - Provide `ELEVENLABS_API_KEY` with your ElevenLabs secret key
-   - Optionally set `ELEVENLABS_VOICE_ID` to choose a different ElevenLabs voice (defaults to Grandpa Oxley)
+   - Optionally set `ELEVENLABS_VOICE_ID` to choose a different ElevenLabs voice (defaults to the Grandpa voice `NOpBlnGInO9m6vDvFkFC`)
    - The `.env` file is ignored by git so your secret stays hidden
-4. Run development server: `npm run dev`
+5. Run development server: `npm run dev`
 
 ## Architecture
 
