@@ -3,6 +3,10 @@ import type { Metadata } from 'next';
 import '../styles/globals.css';
 import { AuthProvider } from '../components/auth/AuthProvider';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export const metadata: Metadata = {
   title: 'AI Guru Meditation',
   description:
