@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_ELEVENLABS_VOICE_ID = 'nPczCjzI0jH1hSO1N38F';
+const DEFAULT_ELEVENLABS_VOICE_ID = 'NOpBlnGInO9m6vDvFkFC';
 
 const DEFAULT_VOICE_SETTINGS = {
   stability: 0.5,
