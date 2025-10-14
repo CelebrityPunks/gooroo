@@ -25,6 +25,16 @@ A voice-first Next.js app where users speak to an AI Guru who selects and guides
    - These env files are ignored by git so your secret stays hidden
 5. Run development server: `npm run dev`
 
+## Deploying on Render
+
+The repository includes a `render.yaml` blueprint that provisions the app as a Render Node Web Service. If you are configuring the service through the Render dashboard instead, use the following settings so the build succeeds and Next.js can bind to Render's port:
+
+- **Build Command**: `npm ci && npm run build`
+- **Start Command**: `npm run start -- --hostname 0.0.0.0 --port $PORT`
+- **Publish Directory**: _leave blank_ (the app is server-rendered and does not emit a static `build/` folder)
+
+Make sure to add the required environment variables (`ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID`, and `ELEVENLABS_OUTPUT_FORMAT`) so the voice synthesis route can reach ElevenLabs in production.
+
 ## Architecture
 
 See `architecture.md` for detailed technical specifications.

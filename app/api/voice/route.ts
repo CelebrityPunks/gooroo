@@ -5,6 +5,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DEFAULT_ELEVENLABS_VOICE_ID = 'NOpBlnGInO9m6vDvFkFC';
+const DEFAULT_ELEVENLABS_MODEL_ID = 'eleven_multilingual_v2';
+const DEFAULT_ELEVENLABS_OUTPUT_FORMAT = 'mp3_44100_128';
 
 const DEFAULT_VOICE_SETTINGS = {
   stability: 0.5,
@@ -55,6 +57,11 @@ export async function POST(request: Request) {
 
   const voiceId =
     process.env.ELEVENLABS_VOICE_ID?.trim() || DEFAULT_ELEVENLABS_VOICE_ID;
+  const modelId =
+    process.env.ELEVENLABS_MODEL_ID?.trim() || DEFAULT_ELEVENLABS_MODEL_ID;
+  const outputFormat =
+    process.env.ELEVENLABS_OUTPUT_FORMAT?.trim() ||
+    DEFAULT_ELEVENLABS_OUTPUT_FORMAT;
 
   if (!voiceId) {
     // eslint-disable-next-line no-console
@@ -79,7 +86,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: modelId,
+          output_format: outputFormat,
           voice_settings: DEFAULT_VOICE_SETTINGS,
         }),
       }
