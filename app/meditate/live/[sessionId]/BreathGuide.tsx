@@ -129,7 +129,6 @@ export default function BreathGuide({
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioUrlRef = useRef<string | null>(null);
   const speechAbortControllerRef = useRef<AbortController | null>(null);
-  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const introSpokenRef = useRef(false);
 
   useEffect(() => {
@@ -178,52 +177,7 @@ export default function BreathGuide({
       URL.revokeObjectURL(activeAudioUrlRef.current);
       activeAudioUrlRef.current = null;
     }
-
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    fallbackUtteranceRef.current = null;
   }, []);
-
-  const speakWithBrowserVoice = useCallback(
-    (text: string, controller: AbortController) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis) {
-        return false;
-      }
-
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.pitch = 0.85;
-      utterance.rate = 0.9;
-      utterance.volume = 0.9;
-
-      utterance.onend = () => {
-        if (fallbackUtteranceRef.current === utterance) {
-          fallbackUtteranceRef.current = null;
-        }
-        if (speechAbortControllerRef.current === controller) {
-          speechAbortControllerRef.current = null;
-        }
-      };
-
-      utterance.onerror = () => {
-        if (fallbackUtteranceRef.current === utterance) {
-          fallbackUtteranceRef.current = null;
-        }
-        if (speechAbortControllerRef.current === controller) {
-          speechAbortControllerRef.current = null;
-        }
-      };
-
-      fallbackUtteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-
-      return true;
-    },
-    []
-  );
 
   const speakPhase = useCallback(
     (nextPhase: BreathPhase, duration: number, nextCycle: number) => {
@@ -319,21 +273,6 @@ export default function BreathGuide({
         })
         .finally(() => {
           if (speechAbortControllerRef.current === controller) {
-            const fallbackStarted = speakWithBrowserVoice(text, controller);
-
-            if (!fallbackStarted) {
-              // eslint-disable-next-line no-console
-              console.error(
-                'Voice guidance fallback unavailable after playback failure'
-              );
-              speechAbortControllerRef.current = null;
-            }
-          }
-
-          if (
-            speechAbortControllerRef.current === controller &&
-            !fallbackUtteranceRef.current
-          ) {
             speechAbortControllerRef.current = null;
           }
         });
@@ -342,7 +281,6 @@ export default function BreathGuide({
       cancelSpeech,
       hasHold,
       isVoiceGuideEnabled,
-      speakWithBrowserVoice,
       techniqueDescription,
       techniqueIntention,
       techniqueName,
