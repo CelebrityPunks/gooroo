@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { NextResponse } from 'next/server';
+
 const ELEVEN_LABS_VOICE_ID = 'NOpBlnGInO9m6vDvFkFC';
 
 const DEFAULT_VOICE_SETTINGS = {
@@ -42,6 +44,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const apiKey =
+    process.env.ELEVENLABS_API_KEY ??
+    'sk_2d973eb0cbaffa4d9012168577035095c9306aec175c24dd';
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
 
   if (!apiKey) {
