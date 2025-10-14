@@ -126,6 +126,10 @@ export default function LiveSessionView({
 
   const isSessionLive = status === 'live';
   const isGuidanceLive = isSessionLive && hasGuidanceStarted;
+  const shouldShowStartButton = useMemo(
+    () => !isVoiceGuideEnabled || hasIntroCompleted,
+    [hasIntroCompleted, isVoiceGuideEnabled]
+  );
 
   useEffect(() => {
     if (!timerStartedAt) {
@@ -201,8 +205,8 @@ export default function LiveSessionView({
     if (!hasGuidanceStarted) {
       if (isVoiceGuideEnabled && !hasIntroCompleted) {
         return introNeedsUserInteraction
-          ? 'Tap "Play Intro" so your browser can allow the guide\'s voice, then press start when you are ready.'
-          : "Listen to the guide's introduction. The start button will unlock once it finishes.";
+          ? 'Tap "Play Intro" so your browser can allow the guide\'s voice, then the welcome message will continue.'
+          : "Listen to the guide's introduction. Your start button will appear once the welcome message ends.";
       }
 
       return 'Settle in. Press start when you feel ready to begin the guided breath.';
@@ -694,34 +698,29 @@ export default function LiveSessionView({
               <div className='mt-4 space-y-3 text-left'>
                 {!hasGuidanceStarted && isSessionLive && (
                   <div className='flex flex-col gap-3'>
-                    <div className='flex flex-wrap items-center gap-3'>
-                      <Button
-                        type='button'
-                        onClick={handleStartGuidance}
-                        className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
-                        disabled={
-                          isIntroPlaying ||
-                          (isVoiceGuideEnabled && !hasIntroCompleted)
-                        }
-                      >
-                        {isIntroPlaying
-                          ? 'Guide Speaking…'
-                          : isVoiceGuideEnabled && !hasIntroCompleted
-                            ? 'Waiting on Intro'
-                            : 'Start Session'}
-                      </Button>
-                      <span className='text-xs text-blue-100/70'>
-                        {isVoiceGuideEnabled
-                          ? isIntroPlaying
-                            ? 'Your guide is introducing the practice—start when you feel prepared.'
-                            : hasIntroCompleted
-                              ? 'Press start to begin the timed guidance and breathing cues.'
-                              : introNeedsUserInteraction
-                                ? 'Tap play below to allow the guide before we begin.'
-                                : 'We will begin once the introduction concludes.'
-                          : 'Press start to begin the timed guidance and breathing cues.'}
-                      </span>
-                    </div>
+                    {shouldShowStartButton ? (
+                      <div className='flex flex-wrap items-center gap-3'>
+                        <Button
+                          type='button'
+                          onClick={handleStartGuidance}
+                          className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
+                          disabled={isIntroPlaying}
+                        >
+                          Start Session
+                        </Button>
+                        <span className='text-xs text-blue-100/70'>
+                          {isVoiceGuideEnabled
+                            ? 'Press start when you are ready to follow the guided inhale and exhale cues.'
+                            : 'Press start to begin the timed guidance and breathing cues.'}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className='text-xs text-blue-100/70'>
+                        {introNeedsUserInteraction
+                          ? 'Tap "Play Intro" so your browser can enable the guide\'s welcome message.'
+                          : 'Your guide is introducing the practice. The start button will appear once the welcome message ends.'}
+                      </p>
+                    )}
                     {introNeedsUserInteraction && manualIntroPlay && (
                       <div className='flex flex-wrap items-center gap-3'>
                         <Button
