@@ -304,6 +304,10 @@ export default function BreathGuide({
           };
 
           await audio.play();
+
+          if (speechAbortControllerRef.current === controller) {
+            speechAbortControllerRef.current = null;
+          }
         })
         .catch(error => {
           if (controller.signal.aborted) {
@@ -312,8 +316,7 @@ export default function BreathGuide({
 
           // eslint-disable-next-line no-console
           console.error('Voice guidance playback error', error);
-        })
-        .finally(() => {
+
           if (speechAbortControllerRef.current === controller) {
             const fallbackStarted = speakWithBrowserVoice(text, controller);
 
@@ -325,7 +328,8 @@ export default function BreathGuide({
               speechAbortControllerRef.current = null;
             }
           }
-
+        })
+        .finally(() => {
           if (
             speechAbortControllerRef.current === controller &&
             !fallbackUtteranceRef.current
