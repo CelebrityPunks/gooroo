@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_ELEVENLABS_VOICE_ID = 'NOpBlnGInO9m6vDvFkFC';
+const DEFAULT_ELEVENLABS_VOICE_ID = 'nPczCjzI0jH1hSO1N38F';
 
 const DEFAULT_VOICE_SETTINGS = {
   stability: 0.5,
@@ -53,11 +53,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || DEFAULT_ELEVENLABS_VOICE_ID;
+  const voiceId =
+    process.env.ELEVENLABS_VOICE_ID?.trim() || DEFAULT_ELEVENLABS_VOICE_ID;
 
   if (!voiceId) {
     // eslint-disable-next-line no-console
-    console.error('Missing ELEVENLABS_VOICE_ID and no default voice configured.');
+    console.error(
+      'Missing ELEVENLABS_VOICE_ID and no default voice configured.'
+    );
     return NextResponse.json(
       { error: 'Voice service is not configured.' },
       { status: 500 }
