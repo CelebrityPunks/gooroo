@@ -17,7 +17,6 @@ import {
 } from '../../../../lib/sessions';
 import { formatPattern, Technique } from '../../../../lib/techniques';
 import BreathGuide from './BreathGuide';
-import { useIntroVoice } from './useIntroVoice';
 
 interface LiveSessionViewProps {
   sessionId: string;
@@ -833,7 +832,6 @@ export default function LiveSessionView({
           techniqueDescription={technique.description}
           techniqueIntention={technique.intention}
           isActive={isGuidanceLive}
-          isActive={isActive}
           isPaused={isPaused}
           isVoiceGuideEnabled={isVoiceGuideEnabled}
         />
