@@ -304,6 +304,10 @@ export default function BreathGuide({
           };
 
           await audio.play();
+
+          if (speechAbortControllerRef.current === controller) {
+            speechAbortControllerRef.current = null;
+          }
         })
         .catch(error => {
           if (controller.signal.aborted) {
