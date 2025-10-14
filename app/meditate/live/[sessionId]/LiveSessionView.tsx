@@ -17,6 +17,7 @@ import {
 } from '../../../../lib/sessions';
 import { formatPattern, Technique } from '../../../../lib/techniques';
 import BreathGuide from './BreathGuide';
+import { useIntroVoice } from './useIntroVoice';
 
 interface LiveSessionViewProps {
   sessionId: string;
@@ -55,50 +56,6 @@ const reflectionMoodOptions = [
   { value: 'focused', label: 'Focused and energised' },
 ];
 
-function formatSeconds(seconds: number) {
-  if (seconds <= 0) {
-    return '';
-  }
-
-  return seconds === 1 ? '1 second' : `${seconds} seconds`;
-}
-
-function buildIntroScript(technique: Technique) {
-  const { name, description, intention, pattern } = technique;
-  const inhale = Math.max(pattern.inhale, 0);
-  const hold = Math.max(pattern.hold ?? 0, 0);
-  const exhale = Math.max(pattern.exhale, 0);
-
-  const cycleSegments: string[] = [];
-  if (inhale > 0) {
-    cycleSegments.push(`inhale for ${formatSeconds(inhale)}`);
-  }
-  if (hold > 0) {
-    cycleSegments.push(`rest for ${formatSeconds(hold)}`);
-  }
-  if (exhale > 0) {
-    cycleSegments.push(`exhale for ${formatSeconds(exhale)}`);
-  }
-
-  const openingCycleLine =
-    cycleSegments.length > 0
-      ? `We'll begin with ${cycleSegments.join(', ')}. During the first round I'll share the timing, then I'll simply guide you with gentle inhale, ${
-          hold > 0 ? 'rest, ' : ''
-        }and exhale cues so you can settle into your own rhythm.`
-      : '';
-
-  const segments = [
-    `Welcome to ${name}.`,
-    description,
-    intention,
-    'Find a comfortable position and let your attention gather around the breath.',
-    openingCycleLine,
-    'When you feel ready, press start and we will breathe together.',
-  ].filter(Boolean);
-
-  return segments.join(' ');
-}
-
 function statusLabel(status: SessionStatus) {
   return status
     .replace(/_/g, ' ')
@@ -131,15 +88,23 @@ export default function LiveSessionView({
   const [isSoundscapeEnabled, setIsSoundscapeEnabled] = useState(false);
   const [isSoundscapeLoading, setIsSoundscapeLoading] = useState(false);
   const [isVoiceGuideEnabled, setIsVoiceGuideEnabled] = useState(true);
-  const [isIntroPlaying, setIsIntroPlaying] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
-  const introAbortControllerRef = useRef<AbortController | null>(null);
-  const introAudioRef = useRef<HTMLAudioElement | null>(null);
-  const introAudioUrlRef = useRef<string | null>(null);
-  const introPlayedRef = useRef(initialStatus !== 'live');
+
+  const {
+    isIntroPlaying,
+    introNeedsUserInteraction,
+    manualIntroPlay,
+    playIntro,
+    cancelIntro,
+    resetIntroState,
+  } = useIntroVoice({
+    technique,
+    isVoiceGuideEnabled,
+    initiallyCompleted: initialStatus !== 'live',
+  });
 
   const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(() => {
     if (initialStatus !== 'live' && startedAt) {
@@ -304,101 +269,6 @@ export default function LiveSessionView({
   const reflectionButtonLabel =
     status === 'completed' ? 'Update Reflection' : 'Log Reflection';
 
-  const cancelIntro = useCallback(() => {
-    introAbortControllerRef.current?.abort();
-    introAbortControllerRef.current = null;
-
-    if (introAudioRef.current) {
-      introAudioRef.current.pause();
-      introAudioRef.current.currentTime = 0;
-      introAudioRef.current = null;
-    }
-
-    if (introAudioUrlRef.current) {
-      URL.revokeObjectURL(introAudioUrlRef.current);
-      introAudioUrlRef.current = null;
-    }
-
-    setIsIntroPlaying(false);
-  }, []);
-
-  const speakIntro = useCallback(async () => {
-    if (!technique || introPlayedRef.current) {
-      return;
-    }
-
-    const text = buildIntroScript(technique);
-
-    if (!text) {
-      introPlayedRef.current = true;
-      return;
-    }
-
-    setIsIntroPlaying(true);
-    const controller = new AbortController();
-    introAbortControllerRef.current = controller;
-
-    try {
-      const response = await fetch('/api/voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to retrieve intro audio');
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-
-      introAudioRef.current = audio;
-      introAudioUrlRef.current = url;
-
-      audio.onended = () => {
-        if (introAudioRef.current === audio) {
-          introAudioRef.current = null;
-        }
-        if (introAudioUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          introAudioUrlRef.current = null;
-        }
-        introPlayedRef.current = true;
-        setIsIntroPlaying(false);
-      };
-
-      audio.onerror = () => {
-        if (introAudioUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          introAudioUrlRef.current = null;
-        }
-        setIsIntroPlaying(false);
-      };
-
-      await audio.play();
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        // eslint-disable-next-line no-console
-        console.error('Voice intro playback error', error);
-        setIsIntroPlaying(false);
-        introPlayedRef.current = true;
-      }
-    } finally {
-      if (introAbortControllerRef.current === controller) {
-        introAbortControllerRef.current = null;
-      }
-    }
-  }, [technique]);
-
   const handleTogglePause = async () => {
     if (!isGuidanceLive) {
       return;
@@ -479,8 +349,7 @@ export default function LiveSessionView({
       return;
     }
 
-    cancelIntro();
-    introPlayedRef.current = true;
+    resetIntroState({ markCompleted: true, played: true });
     setHasGuidanceStarted(true);
     setIsPaused(false);
     setTimerStartedAt(new Date());
@@ -497,7 +366,13 @@ export default function LiveSessionView({
       // eslint-disable-next-line no-console
       console.error('Failed to log start event', error);
     }
-  }, [cancelIntro, hasGuidanceStarted, isSessionLive, sessionId, technique]);
+  }, [
+    hasGuidanceStarted,
+    isSessionLive,
+    resetIntroState,
+    sessionId,
+    technique,
+  ]);
 
   const handleReflectionSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -669,10 +544,7 @@ export default function LiveSessionView({
   }, [stopSoundscape]);
 
   const handleVoiceGuideToggle = useCallback(() => {
-    if (isVoiceGuideEnabled) {
-      cancelIntro();
-    }
-
+    resetIntroState();
     setIsVoiceGuideEnabled(previous => !previous);
     setFeedback({
       type: 'info',
@@ -680,22 +552,15 @@ export default function LiveSessionView({
         ? 'Voice guidance resumed. A calming narration will accompany each breath.'
         : 'Voice guidance muted. Continue following the visual cue at your own pace.',
     });
-  }, [cancelIntro, isVoiceGuideEnabled]);
-
-  useEffect(() => {
-    if (!isVoiceGuideEnabled) {
-      cancelIntro();
-      introPlayedRef.current = false;
-    }
-  }, [cancelIntro, isVoiceGuideEnabled]);
+  }, [isVoiceGuideEnabled, resetIntroState]);
 
   useEffect(() => {
     if (!isSessionLive || hasGuidanceStarted || !isVoiceGuideEnabled) {
       return;
     }
 
-    void speakIntro();
-  }, [hasGuidanceStarted, isSessionLive, isVoiceGuideEnabled, speakIntro]);
+    void playIntro();
+  }, [hasGuidanceStarted, isSessionLive, isVoiceGuideEnabled, playIntro]);
 
   useEffect(() => {
     return () => {
@@ -766,20 +631,42 @@ export default function LiveSessionView({
               </p>
               <div className='mt-4 space-y-3 text-left'>
                 {!hasGuidanceStarted && isSessionLive && (
-                  <div className='flex flex-wrap items-center gap-3'>
-                    <Button
-                      type='button'
-                      onClick={handleStartGuidance}
-                      className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
-                      disabled={isIntroPlaying}
-                    >
-                      {isIntroPlaying ? 'Preparing…' : 'Start Session'}
-                    </Button>
-                    <span className='text-xs text-blue-100/70'>
-                      {isIntroPlaying
-                        ? 'Your guide is introducing the practice—start when you are ready.'
-                        : 'Press start to begin the timed guidance and breathing cues.'}
-                    </span>
+                  <div className='flex flex-col gap-2'>
+                    <div className='flex flex-wrap items-center gap-3'>
+                      <Button
+                        type='button'
+                        onClick={handleStartGuidance}
+                        className='bg-white text-slate-900 hover:bg-slate-100 focus:ring-white/60'
+                        disabled={isIntroPlaying || introNeedsUserInteraction}
+                      >
+                        {isIntroPlaying ? 'Preparing…' : 'Start Session'}
+                      </Button>
+                      <span className='text-xs text-blue-100/70'>
+                        {isIntroPlaying
+                          ? 'Your guide is introducing the practice—start when you are ready.'
+                          : introNeedsUserInteraction
+                            ? 'Tap “Play Introduction” so your guide can begin before you start the session.'
+                            : 'Press start to begin the timed guidance and breathing cues.'}
+                      </span>
+                    </div>
+                    {introNeedsUserInteraction && manualIntroPlay && (
+                      <div className='flex flex-wrap items-center gap-3 pl-1'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => {
+                            void manualIntroPlay?.();
+                          }}
+                          className='border-white/30 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30'
+                        >
+                          Play Introduction
+                        </Button>
+                        <span className='text-xs text-blue-100/70'>
+                          Autoplay was blocked. Start the narration here, then
+                          press “Start Session”.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className='flex flex-wrap items-center gap-3'>
