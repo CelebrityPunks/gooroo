@@ -105,12 +105,6 @@ function createSpeechText(
     return simpleByPhase[phase as keyof typeof simpleByPhase];
   }
 
-  }
-
-  if (phase in simpleByPhase) {
-    return simpleByPhase[phase as keyof typeof simpleByPhase];
-  }
-
   return '';
 }
 
@@ -178,12 +172,6 @@ export default function BreathGuide({
       activeAudioRef.current.pause();
       activeAudioRef.current.currentTime = 0;
       activeAudioRef.current = null;
-    }
-
-    if (activeAudioUrlRef.current) {
-      URL.revokeObjectURL(activeAudioUrlRef.current);
-      activeAudioUrlRef.current = null;
-    }
     }
 
     if (activeAudioUrlRef.current) {
@@ -327,14 +315,17 @@ export default function BreathGuide({
         })
         .finally(() => {
           if (speechAbortControllerRef.current === controller) {
-          const fallbackStarted = speakWithBrowserVoice(text, controller);
+            const fallbackStarted = speakWithBrowserVoice(text, controller);
 
-          if (!fallbackStarted) {
-            // eslint-disable-next-line no-console
-            console.error('Voice guidance playback error', error);
+            if (!fallbackStarted) {
+              // eslint-disable-next-line no-console
+              console.error(
+                'Voice guidance fallback unavailable after playback failure'
+              );
+              speechAbortControllerRef.current = null;
+            }
           }
-        })
-        .finally(() => {
+
           if (
             speechAbortControllerRef.current === controller &&
             !fallbackUtteranceRef.current
