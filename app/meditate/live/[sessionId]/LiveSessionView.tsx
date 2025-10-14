@@ -17,6 +17,7 @@ import {
 } from '../../../../lib/sessions';
 import { formatPattern, Technique } from '../../../../lib/techniques';
 import BreathGuide from './BreathGuide';
+import { useIntroVoice } from './useIntroVoice';
 
 interface LiveSessionViewProps {
   sessionId: string;
