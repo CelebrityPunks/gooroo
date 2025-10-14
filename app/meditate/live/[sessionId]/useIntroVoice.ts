@@ -46,6 +46,15 @@ function buildIntroScript(technique: Technique) {
   return segments.join(' ');
 }
 
+function techniqueSignature(technique: Technique | null) {
+  if (!technique) {
+    return null;
+  }
+
+  const { name, pattern } = technique;
+  return [name, pattern.inhale, pattern.hold ?? 0, pattern.exhale].join('|');
+}
+
 type IntroOptions = {
   technique: Technique | null;
   isVoiceGuideEnabled: boolean;
@@ -76,6 +85,9 @@ export function useIntroVoice({
   const introAbortControllerRef = useRef<AbortController | null>(null);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introAudioUrlRef = useRef<string | null>(null);
+  const techniqueSignatureRef = useRef<string | null>(
+    techniqueSignature(technique)
+  );
 
   const releaseAudio = useCallback(() => {
     if (introAudioRef.current) {
@@ -114,6 +126,14 @@ export function useIntroVoice({
     setManualIntroPlay(null);
   }, [releaseAudio]);
 
+  const markIntroPending = useCallback(() => {
+    introPlayedRef.current = false;
+    setHasIntroCompleted(false);
+    setIsIntroPlaying(false);
+    setIntroNeedsUserInteraction(false);
+    setManualIntroPlay(null);
+  }, []);
+
   const resetIntroState = useCallback(
     (options?: ResetOptions) => {
       cancelIntro();
@@ -122,6 +142,9 @@ export function useIntroVoice({
 
       introPlayedRef.current = played;
       setHasIntroCompleted(completed);
+      setIsIntroPlaying(false);
+      setIntroNeedsUserInteraction(false);
+      setManualIntroPlay(null);
     },
     [cancelIntro]
   );
@@ -241,6 +264,31 @@ export function useIntroVoice({
       }
     }
   }, [cancelIntro, isVoiceGuideEnabled, markIntroComplete, technique]);
+
+  useEffect(() => {
+    const signature = techniqueSignature(technique);
+
+    if (techniqueSignatureRef.current === signature) {
+      return;
+    }
+
+    techniqueSignatureRef.current = signature;
+
+    if (!signature || !isVoiceGuideEnabled) {
+      cancelIntro();
+      markIntroComplete();
+      return;
+    }
+
+    cancelIntro();
+    markIntroPending();
+  }, [
+    cancelIntro,
+    isVoiceGuideEnabled,
+    markIntroComplete,
+    markIntroPending,
+    technique,
+  ]);
 
   useEffect(() => {
     return () => {
