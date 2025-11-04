@@ -36,7 +36,9 @@ const loadEnvFile = filePath => {
     const rawValue = rawValueParts.join('=').trim();
     const value = trimQuotes(rawValue);
 
-    process.env[key] = value;
+    if (typeof process.env[key] === 'undefined') {
+      process.env[key] = value;
+    }
   });
 };
 
